@@ -1,6 +1,6 @@
 # Game Design Document — Mytharion
 
-> Text MMORPG | Global Release (EN / KO) | Turn-based / Asynchronous
+> Text MMORPG | Global Release (EN / KO) | Asynchronous Multiplayer
 
 ---
 
@@ -9,43 +9,56 @@
 | Item | Detail |
 |---|---|
 | Title | Mytharion |
-| Genre | Text MMORPG |
-| Platform | Web / Mobile (text-based interface) |
+| Genre | Text MMORPG (classic MUD sensibility) |
+| Platform | Android (launch) → PC / Web expansion |
 | Target Audience | Global — English and Korean language support |
-| Play Style | Non-realtime (asynchronous, turn-based interactions) |
-| Business Model | Free-to-play with optional cosmetic/convenience purchases |
+| Play Style | Non-realtime asynchronous multiplayer |
+| Business Model | Free-to-play, no pay-to-win |
 
 ---
 
-## 2. World & Lore
+## 2. Tech Stack
 
-### 2.1 Setting — Mytharion
+| Layer | Choice |
+|---|---|
+| Frontend | Vanilla HTML / CSS / JS |
+| Mobile Build | Capacitor (Android — primary launch target) |
+| Backend / DB | Supabase free tier (existing project, table prefix: `text_mmorpg_`) |
+| PC Hosting | GitHub Pages |
+| Version Control | GitHub |
+
+---
+
+## 3. World & Lore
+
+### 3.1 Setting — Mytharion
 
 A single continent shaped by the aftermath of a war among ancient gods. The gods have either been sealed away or destroyed, but their essence and influence linger throughout the land — embedded in ruins, landscapes, creatures, and the memories of its people.
 
 The world feels ancient and layered. Every region carries the weight of a forgotten age.
 
-### 2.2 Core Themes
+### 3.2 Core Themes
 
 - **Remnants of divinity**: The gods are gone, but their power bleeds through the earth, sky, and sea.
 - **Mystery over spectacle**: The world reveals itself through exploration and dialogue, not cutscenes.
 - **Human resilience**: Players begin as ordinary people — greatness is earned, not given.
 
-### 2.3 Geography
+### 3.3 Geography
 
 - **Single continent** divided into distinct biomes and zones based on natural terrain (forests, mountains, coastlines, wastelands, etc.)
+- Zone progression: early zones (low level) → mid zones (world lore unfolds) → late zones (core divine remnants)
 - Each zone houses one or more **factions** — civilizations, cults, orders, or remnants shaped by the god whose influence once touched that land.
-- Zones are discovered sequentially; entering a new region triggers a descriptive passage establishing its atmosphere and history.
+- Entering a new region triggers a descriptive passage establishing its atmosphere and history.
 
 ---
 
-## 3. Characters
+## 4. Characters
 
-### 3.1 Player Character
+### 4.1 Player Character
 
 Players begin as an ordinary human with no special origin. Class is selected at character creation and determines starting stats, skill access, and narrative framing.
 
-### 3.2 Classes
+### 4.2 Classes
 
 | Class | Role | Primary Stats |
 |---|---|---|
@@ -54,75 +67,103 @@ Players begin as an ordinary human with no special origin. Class is selected at 
 | Archer | Ranged physical, balanced offense | DEX, STR |
 | Cleric | Support and healing, moderate combat | WIZ, CON |
 
-### 3.3 Stats
+### 4.3 Stats
 
-| Stat | Full Name | Description |
+| Stat | Full Name | Effect |
 |---|---|---|
 | STR | Strength | Physical attack power |
-| CON | Constitution | Max HP and physical defense |
-| DEX | Dexterity | Attack speed, dodge chance, ranged accuracy |
-| INT | Intelligence | Magic attack power and spell capacity |
-| WIZ | Wisdom | Healing power, magic defense, and MP regeneration |
+| CON | Constitution | Max HP |
+| DEX | Dexterity | Hit chance, dodge chance |
+| INT | Intelligence | Magic damage |
+| WIZ | Wisdom | Max MP, MP regeneration |
 
 - Each class has a **fixed stat distribution** that scales automatically on level-up.
-- Players do not manually allocate stats — growth is handled by the system based on class archetype.
+- Players do not manually allocate stats — growth is fully automatic and class-driven.
 
-### 3.4 Progression
+### 4.4 Progression
 
-- Characters advance through **level-up**, gained by accumulating experience from combat and quests.
-- On each level-up, all stats increase by class-determined amounts automatically.
-- New skills unlock at specific level thresholds.
+- Experience from combat and quests → level-up → all stats increase by class-determined amounts.
+- New skills unlock automatically at specific level thresholds.
 
 ---
 
-## 4. Combat
+## 5. Skills
 
-### 4.1 System
+- **Structure**: Each class has a fixed skill set — no cross-class skills.
+- **Unlock**: Skills unlock automatically on level-up (no manual selection required).
+- **Design intent**: Clear class identity and simplified balance management.
+
+---
+
+## 6. Combat
+
+### 6.1 System
 
 Combat is **semi-automated with skill intervention**:
 
 - The base combat loop resolves automatically (auto-attack exchanges between player and enemy).
-- Players may **interrupt at any point** to activate skills, which consume resources (MP / cooldown) and alter the combat outcome.
-- This design keeps pace comfortable for asynchronous play while preserving meaningful decisions.
+- Players may activate skills between rounds, consuming MP / triggering cooldowns.
+- Designed for comfortable asynchronous play with meaningful moment-to-moment decisions.
 
-### 4.2 Enemy Behavior
+### 6.2 Enemy Behavior
 
 | Type | Behavior |
 |---|---|
-| Passive (비선공) | Will not initiate combat; only fight back if attacked |
-| Aggressive (선공) | Initiates combat on proximity or zone entry |
+| Passive (비선공) | Will not initiate combat; only fight back if attacked by the player |
+| Aggressive (선공) | Initiates combat automatically on proximity or zone entry |
 
-- Each monster has its own **lore description** displayed on first encounter.
-- Enemy difficulty is tied to zone level, not player level scaling.
+- Each monster type has its own **lore description** displayed on encounter.
+- Enemy difficulty is tied to zone level range.
 
-### 4.3 Combat Flow
+### 6.3 Combat Flow
 
-1. Player enters zone or initiates encounter
-2. Enemy type and description displayed
-3. Auto-combat begins, resolving in rounds
+1. Player enters zone or selects a target
+2. Enemy type and lore description displayed
+3. Auto-combat begins, resolving round by round
 4. Player may activate skills between rounds
 5. Combat ends in victory, retreat, or defeat
 
 ---
 
-## 5. Quests & Story
+## 7. Equipment & Items
 
-### 5.1 Quest Types
+### Phase 1
+- **Equipment system**: Weapons and armor obtainable via monster drops and shop purchases.
+- Stats on equipment affect combat numbers directly.
+
+### Phase 2
+- **Consumables**: Potions and other use-items added after core loop is stable.
+
+---
+
+## 8. Zones & World Structure
+
+- Zones are gated by level range — players progress through them sequentially.
+- **Early zones**: Low-level content, onboarding, world introduction.
+- **Mid zones**: Story escalation, faction conflicts, world lore deepens.
+- **Late zones**: Ruins and remnants tied directly to the gods' war — the narrative core.
+- Each zone has its own natural environment, faction presence, and distinct monster roster.
+
+---
+
+## 9. Quests & Storytelling
+
+### 9.1 Quest Types
 
 | Type | Description |
 |---|---|
-| Main Quest | The central narrative — uncovering the truth behind the gods' war and its aftermath |
-| Regional Quest | Zone-specific stories tied to local factions, history, and the god's remnant influence |
-| Repeatable Quest | Daily/recurring tasks for resource gathering, faction standing, or grinding |
+| Main Quest | Central narrative — uncovering the truth behind the gods' war |
+| Regional Quest | Zone-specific stories tied to local factions and divine remnants |
+| Repeatable Quest | Daily/recurring tasks for XP, resources, and faction standing |
 
-### 5.2 Narrative Principles
+### 9.2 Narrative Principles
 
 - **Zone entry descriptions**: Every region has a unique introductory text passage setting tone and history.
 - **Monster lore**: Each enemy type has a distinct description connecting it to the world's mythology.
-- **NPC dialogue**: All NPCs reflect the worldview and knowledge of their faction — no NPC speaks outside their narrative context.
-- Exposition is delivered through exploration and conversation, never through walls of system text.
+- **NPC dialogue**: All NPCs reflect the worldview and knowledge of their faction.
+- Exposition is delivered through exploration and conversation, not system text walls.
 
-### 5.3 Story Structure (High-level)
+### 9.3 Story Structure (High-level)
 
 ```
 Act 0 — The Ordinary World
@@ -143,36 +184,53 @@ Act 4 — Reckoning
 
 ---
 
-## 6. Monetization
+## 10. Onboarding
 
-- **Model**: Free-to-play with optional purchases (부분 유료화)
-- **Principle**: No pay-to-win. Purchasable items must not affect game balance.
-- **Planned categories** (details TBD):
-  - Cosmetic items (appearance, titles, profile customization)
-  - Convenience items (e.g., additional quest slots, storage expansion)
-  - Premium story content or cosmetic region packs
-- Specific item list and pricing will be determined in a later design phase.
+- Short tutorial quest on first login — introduces core systems through NPC-guided play.
+- Skippable for returning or experienced players.
+- NPC delivers the world's first impression and sets narrative tone.
 
 ---
 
-## 7. Localization
+## 11. Multiplayer Features
+
+### Phase 1
+- **Global chat**: Asynchronous text chat visible to all players.
+- **Ranking system**: Leaderboards by level and combat power.
+
+### Phase 2
+- Trading post (player-to-player item exchange)
+- Party system
+- Guild system
+
+---
+
+## 12. Monetization
+
+- **Model**: Free-to-play with optional purchases — no pay-to-win.
+- **Principle**: Purchasable items must not affect game balance or progression speed.
+
+| Phase | Items |
+|---|---|
+| Phase 1 | Costumes, inventory expansion slots, additional character slots |
+| Phase 2 (review) | XP / drop rate boosters (balance review required before adding) |
+
+---
+
+## 13. Localization
 
 - **Supported languages at launch**: English (EN), Korean (KO)
 - Language selection available at account creation and in settings.
-- All quest text, NPC dialogue, item descriptions, and UI strings will be fully localized.
-- Lore tone in Korean will preserve a classical/literary register consistent with the world's atmosphere.
+- All quest text, NPC dialogue, item descriptions, and UI strings fully localized.
+- Korean lore text will maintain a classical/literary register consistent with the world's atmosphere.
 
 ---
 
-## 8. Open Questions / TBD
+## 14. Next Steps
 
-- [ ] Skill list per class (names, effects, unlock levels)
-- [ ] Full zone list and zone order
-- [ ] Faction list and faction relationship system
-- [ ] Economy design (currency, trading, crafting)
-- [ ] Social features (guilds, party play in async context)
-- [ ] Specific monetization item list and pricing
-- [ ] Platform and tech stack decision
+- [x] Tech stack confirmed
+- [x] GDD open questions resolved
+- [ ] Core system prototype development — begin
 
 ---
 
