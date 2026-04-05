@@ -1,0 +1,13 @@
+{
+  "appId": "com.mytharion.textmmorpg",
+  "appName": "Mytharion",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}

@@ -1,0 +1,90 @@
+<div class="container">
+  <div style="text-align:center; margin-bottom: 32px;">
+    <h1 class="amber-glow" style="font-size:2rem; letter-spacing:0.2em;">MYTHARION</h1>
+    <p class="muted">Ancient gods fell. Their marks remain.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Login</div>
+
+    <div id="login-form">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="login-email" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="login-password" autocomplete="current-password" />
+      </div>
+      <p id="login-error" class="muted" style="color:var(--danger); margin-bottom:12px;"></p>
+      <button class="btn btn-block" onclick="handleLogin()">Enter</button>
+    </div>
+
+    <hr class="divider" />
+
+    <div id="signup-form" style="display:none;">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="signup-username" />
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="signup-email" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="signup-password" autocomplete="new-password" />
+      </div>
+      <div class="field">
+        <label>Language</label>
+        <select id="signup-lang">
+          <option value="en">English</option>
+          <option value="ko">한국어</option>
+        </select>
+      </div>
+      <p id="signup-error" class="muted" style="color:var(--danger); margin-bottom:12px;"></p>
+      <button class="btn btn-block" onclick="handleSignup()">Create Account</button>
+    </div>
+
+    <p class="muted" style="text-align:center; margin-top:16px;">
+      <a href="#" id="toggle-form" onclick="toggleForm()">No account? Sign up</a>
+    </p>
+  </div>
+</div>
+
+<script>
+  let isSignup = false;
+
+  function toggleForm() {
+    isSignup = !isSignup;
+    document.getElementById('login-form').style.display  = isSignup ? 'none'  : 'block';
+    document.getElementById('signup-form').style.display = isSignup ? 'block' : 'none';
+    document.getElementById('toggle-form').textContent   = isSignup
+      ? 'Already have an account? Log in'
+      : 'No account? Sign up';
+  }
+
+  async function handleLogin() {
+    const email    = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    try {
+      await Auth.signIn(email, password);
+      location.reload();
+    } catch (e) {
+      document.getElementById('login-error').textContent = e.message;
+    }
+  }
+
+  async function handleSignup() {
+    const username = document.getElementById('signup-username').value.trim();
+    const email    = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const language = document.getElementById('signup-lang').value;
+    try {
+      await Auth.signUp(email, password, username, language);
+      location.reload();
+    } catch (e) {
+      document.getElementById('signup-error').textContent = e.message;
+    }
+  }
+</script>

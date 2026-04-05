@@ -1,0 +1,75 @@
+<div class="container">
+  <div style="text-align:center; margin-bottom: 24px;">
+    <h2 class="amber">Create Your Character</h2>
+    <p class="muted">You arrive in Mytharion as a stranger, with nothing but a name.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Character Setup</div>
+
+    <div class="field">
+      <label>Name</label>
+      <input type="text" id="char-name" maxlength="20" placeholder="Enter your name..." />
+    </div>
+
+    <div class="field">
+      <label>Class</label>
+      <select id="char-class" onchange="updateClassPreview()">
+        <option value="warrior">Warrior</option>
+        <option value="mage">Mage</option>
+        <option value="archer">Archer</option>
+        <option value="cleric">Cleric</option>
+      </select>
+    </div>
+
+    <div id="class-preview" class="panel" style="margin-top:16px; font-size:0.82rem;">
+      <!-- filled by updateClassPreview() -->
+    </div>
+
+    <p id="create-error" class="muted" style="color:var(--danger); margin: 12px 0;"></p>
+    <button class="btn btn-block" style="margin-top:8px;" onclick="handleCreate()">Begin Your Journey</button>
+  </div>
+</div>
+
+<script>
+  const CLASS_DESC = {
+    warrior: 'A seasoned fighter who endures through brute force and iron will.',
+    mage:    'A scholar of arcane power, fragile in body but devastating in spell.',
+    archer:  'A precise hunter who strikes from distance before the enemy can react.',
+    cleric:  'A servant of forgotten gods, wielding healing and sacred force alike.',
+  };
+
+  function updateClassPreview() {
+    const cls   = document.getElementById('char-class').value;
+    const base  = Character.CLASS_BASE[cls];
+    const desc  = CLASS_DESC[cls];
+    document.getElementById('class-preview').innerHTML = `
+      <p class="muted" style="margin-bottom:10px;">${desc}</p>
+      <div style="display:grid; grid-template-columns: repeat(5,1fr); gap:8px; text-align:center;">
+        ${Object.entries(base).map(([k,v]) => `
+          <div>
+            <div class="amber" style="font-size:0.75rem;">${k.replace('stat_','').toUpperCase()}</div>
+            <div>${v}</div>
+          </div>`).join('')}
+      </div>
+    `;
+  }
+
+  async function handleCreate() {
+    const name = document.getElementById('char-name').value.trim();
+    const cls  = document.getElementById('char-class').value;
+    if (!name) {
+      document.getElementById('create-error').textContent = 'Name is required.';
+      return;
+    }
+    try {
+      const session = await Auth.getSession();
+      await Character.create(session.user.id, name, cls);
+      location.reload();
+    } catch (e) {
+      document.getElementById('create-error').textContent = e.message;
+    }
+  }
+
+  updateClassPreview();
+</script>

@@ -1,0 +1,67 @@
+/* ============================================================
+   style.css — Global base styles
+   Mytharion Text MMORPG
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:        #0a0c0f;
+  --bg-panel:  #0f1318;
+  --bg-input:  #111520;
+  --amber:     #e8a020;
+  --amber-dim: #a06010;
+  --text:      #c8d8e8;
+  --text-dim:  #6a8090;
+  --danger:    #e05050;
+  --success:   #40c870;
+  --border:    #1e2a35;
+  --font:      'Share Tech Mono', monospace;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: var(--amber);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font-family: var(--font);
+  cursor: pointer;
+}
+
+input, textarea, select {
+  font-family: var(--font);
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  outline: none;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--amber);
+}

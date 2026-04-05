@@ -1,0 +1,244 @@
+/* ============================================================
+   terminal.css — Dark terminal + CRT scanline design system
+   Mytharion Text MMORPG
+
+   Design tokens
+   ─────────────
+   Background  : #0a0c0f
+   Accent      : #e8a020  (amber)
+   Text        : #c8d8e8
+   Font        : Share Tech Mono (Google Fonts, monospace)
+   Vibe        : Dark terminal + CRT scanline
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   CRT scanline overlay
+   ------------------------------------------------------------ */
+.crt::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.18) 2px,
+    rgba(0, 0, 0, 0.18) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Subtle screen flicker */
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  92%       { opacity: 1; }
+  93%       { opacity: 0.96; }
+  94%       { opacity: 1; }
+  96%       { opacity: 0.98; }
+}
+
+.crt {
+  animation: flicker 8s infinite;
+}
+
+/* ------------------------------------------------------------
+   Amber cursor blink
+   ------------------------------------------------------------ */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+.cursor::after {
+  content: '█';
+  color: var(--amber);
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+}
+
+/* ------------------------------------------------------------
+   Panel / card
+   ------------------------------------------------------------ */
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+}
+
+.panel-title {
+  color: var(--amber);
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+/* ------------------------------------------------------------
+   Amber glow text
+   ------------------------------------------------------------ */
+.amber {
+  color: var(--amber);
+}
+
+.amber-glow {
+  color: var(--amber);
+  text-shadow:
+    0 0 6px rgba(232, 160, 32, 0.7),
+    0 0 14px rgba(232, 160, 32, 0.3);
+}
+
+/* ------------------------------------------------------------
+   Buttons
+   ------------------------------------------------------------ */
+.btn {
+  display: inline-block;
+  padding: 10px 20px;
+  border: 1px solid var(--amber);
+  background: transparent;
+  color: var(--amber);
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn:hover {
+  background: var(--amber);
+  color: var(--bg);
+}
+
+.btn:active {
+  opacity: 0.8;
+}
+
+.btn-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger);
+  color: var(--bg);
+}
+
+.btn-block {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------
+   Form fields
+   ------------------------------------------------------------ */
+.field {
+  margin-bottom: 16px;
+}
+
+.field label {
+  display: block;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--amber);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(232, 160, 32, 0.15);
+}
+
+/* ------------------------------------------------------------
+   Log / message output area
+   ------------------------------------------------------------ */
+.log {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 16px;
+  height: 320px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  line-height: 1.8;
+}
+
+.log::-webkit-scrollbar {
+  width: 4px;
+}
+
+.log::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+.log::-webkit-scrollbar-thumb {
+  background: var(--amber-dim);
+}
+
+.log-line-system  { color: var(--amber); }
+.log-line-combat  { color: #e88080; }
+.log-line-loot    { color: var(--success); }
+.log-line-story   { color: var(--text); font-style: italic; }
+.log-line-chat    { color: #80c8e8; }
+
+/* ------------------------------------------------------------
+   Stat bars
+   ------------------------------------------------------------ */
+.stat-bar {
+  height: 6px;
+  background: var(--border);
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  background: var(--amber);
+  transition: width 0.4s;
+}
+
+.stat-bar-fill.hp  { background: var(--danger); }
+.stat-bar-fill.mp  { background: #5090e0; }
+.stat-bar-fill.exp { background: var(--success); }
+
+/* ------------------------------------------------------------
+   Divider
+   ------------------------------------------------------------ */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+/* ------------------------------------------------------------
+   Dimmed / muted text
+   ------------------------------------------------------------ */
+.muted {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+/* ------------------------------------------------------------
+   Responsive cap
+   ------------------------------------------------------------ */
+.container {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
