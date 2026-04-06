@@ -228,10 +228,25 @@ Act 4 — Reckoning
 
 ## 14. Next Steps
 
-- [x] Tech stack confirmed
-- [x] GDD open questions resolved
-- [ ] Core system prototype development — begin
+## 완료된 작업
+- [x] GDD Open Questions 전체 확정
+- [x] 기술 스택 확정 (HTML/JS + Capacitor + Supabase + GitHub Pages)
+- [x] 프로젝트 구조 세팅
+- [x] Supabase 테이블 4개 생성 + RLS 적용
+- [x] 로그인/회원가입 구현
+- [x] 캐릭터 생성 구현
+- [x] 게임 화면 진입
+- [x] EXPLORE / REST / INVENTORY 기본 동작
+- [x] 글로벌 채팅 Realtime 구현
+
+## 다음 세션 작업 목록 (우선순위 순)
+- [ ] EXPLORE 실제 콘텐츠 연결 (지역 이동, 몬스터 조우)
+- [ ] 전투 시스템 검증 (자동 전투 + 스킬 개입)
+- [ ] 장비 드롭 시스템 구현
+- [ ] 랭킹 시스템 구현
+- [ ] pg_cron 채팅 24시간 자동 삭제 설정
+- [ ] 출시 전 이메일 인증 복구 (DB 트리거 방식)
 
 ---
 
-*Last updated: 2026-04-05*
+*Last updated: 2026-04-06*
