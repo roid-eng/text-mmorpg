@@ -152,8 +152,8 @@
  * ================================================================
  */
 
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://ooknyhnrlysdubqrypen.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9va255aG5ybHlzZHVicXJ5cGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3MDQwODQsImV4cCI6MjA2NTI4MDA4NH0.uAgqBw7DzZY1FpeKn5a1TY75hq0Sg0a0FhfX4KgYABQ';
 
 // Supabase JS v2 loaded via CDN in HTML, or import via npm:
 // import { createClient } from '@supabase/supabase-js'
