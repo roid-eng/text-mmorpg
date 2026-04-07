@@ -22,9 +22,30 @@ const Game = (() => {
     logEl = document.getElementById('game-log');
     Combat.setLogHandler(log);
 
+    await restoreEquippedBonuses();
+
     log(`Mytharion에 오신 것을 환영합니다, ${character.name}.`, 'story');
     log(`직업: ${character.class}  |  레벨: ${character.level}`, 'system');
     renderStats();
+  }
+
+  async function restoreEquippedBonuses() {
+    const { data: equipped } = await supabaseClient
+      .from('text_mmorpg_inventory')
+      .select('item_id')
+      .eq('character_id', character.id)
+      .eq('equipped', true);
+    if (!equipped || equipped.length === 0) return;
+
+    const itemIds = equipped.map(r => Number(r.item_id));
+    const { data: items } = await supabaseClient
+      .from('text_mmorpg_items')
+      .select('atk_bonus, def_bonus')
+      .in('id', itemIds);
+    if (!items) return;
+
+    equippedBonuses.atk = items.reduce((sum, i) => sum + (i.atk_bonus || 0), 0);
+    equippedBonuses.def = items.reduce((sum, i) => sum + (i.def_bonus || 0), 0);
   }
 
   function renderStats() {
