@@ -356,5 +356,36 @@ const Game = (() => {
     await showInventory();
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem };
+  async function showRanking() {
+    const panel = document.getElementById('ranking-panel');
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+
+    const list = document.getElementById('ranking-list');
+    list.innerHTML = '<span class="muted">불러오는 중...</span>';
+    panel.style.display = 'block';
+
+    const { data: rows, error } = await supabaseClient
+      .from('text_mmorpg_ranking')
+      .select('rank, character_name, class, level, exp, zone_name')
+      .limit(20);
+
+    if (error) { list.innerHTML = '<span class="muted">불러오기 실패</span>'; return; }
+    if (!rows || rows.length === 0) { list.innerHTML = '<span class="muted">랭킹 데이터가 없습니다.</span>'; return; }
+
+    list.innerHTML = '';
+    rows.forEach(row => {
+      const isMe = row.character_name === character.name;
+      const line = document.createElement('div');
+      line.style.cssText = 'padding:2px 0;';
+      const text = `${row.rank}위  ${row.character_name} (${row.class})  Lv.${row.level} — ${row.zone_name || '알 수 없음'}`;
+      if (isMe) {
+        line.innerHTML = `<span class="amber">${text}</span>`;
+      } else {
+        line.textContent = text;
+      }
+      list.appendChild(line);
+    });
+  }
+
+  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, showRanking };
 })();

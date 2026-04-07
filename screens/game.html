@@ -22,6 +22,12 @@
     <div id="inventory-list" style="display:flex; flex-direction:column; gap:4px;"></div>
   </div>
 
+  <!-- Ranking panel -->
+  <div class="panel" id="ranking-panel" style="display:none;">
+    <div class="panel-title">[ 랭킹 ]</div>
+    <div id="ranking-list" style="display:flex; flex-direction:column; gap:4px;"></div>
+  </div>
+
   <!-- Action bar -->
   <div class="panel">
     <div class="panel-title">Actions</div>
@@ -30,6 +36,7 @@
       <button class="btn" onclick="actionRest()">[ Rest ]</button>
       <button class="btn" onclick="actionInventory()">[ Inventory ]</button>
       <button class="btn" onclick="actionChat()">[ Chat ]</button>
+      <button class="btn" style="grid-column: 1 / -1;" onclick="actionRanking()">[ Ranking ]</button>
     </div>
   </div>
 

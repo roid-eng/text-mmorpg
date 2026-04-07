@@ -28,6 +28,10 @@ function actionChat() {
   panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 }
 
+function actionRanking() {
+  Game.showRanking();
+}
+
 async function sendChat() {
   const input   = document.getElementById('chat-input');
   const message = input.value.trim();
