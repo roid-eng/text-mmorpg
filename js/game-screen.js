@@ -10,8 +10,7 @@
 })();
 
 function actionExplore() {
-  Game.log('주변을 탐색합니다...', 'story');
-  // TODO: load zone monsters and trigger encounter
+  Game.explore();
 }
 
 function actionRest() {
@@ -35,13 +34,13 @@ async function sendChat() {
   input.value = '';
 
   const session = await Auth.getSession();
-  const { data: player } = await supabase
+  const { data: player } = await supabaseClient
     .from('text_mmorpg_players')
     .select('username')
     .eq('id', session.user.id)
     .single();
 
-  await supabase.from('text_mmorpg_chat').insert({
+  await supabaseClient.from('text_mmorpg_chat').insert({
     player_id: session.user.id,
     username:  player.username,
     message,
@@ -49,7 +48,7 @@ async function sendChat() {
 }
 
 function subscribeChat() {
-  supabase
+  supabaseClient
     .channel('chat')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'text_mmorpg_chat' }, payload => {
       const { username, message } = payload.new;
