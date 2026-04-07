@@ -3,6 +3,13 @@
  */
 
 const Character = (() => {
+  const STARTING_ITEMS = {
+    warrior: [4, 2],
+    mage:    [6, 7],
+    archer:  [8, 2],
+    cleric:  [9, 7],
+  };
+
   // Base stats per class at level 1
   const CLASS_BASE = {
     warrior: { stat_str: 12, stat_con: 10, stat_dex: 6,  stat_int: 3,  stat_wiz: 4  },
@@ -30,7 +37,7 @@ const Character = (() => {
     const base = CLASS_BASE[className];
     const { hp_max, mp_max } = deriveHpMp(base);
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('text_mmorpg_characters')
       .insert({
         player_id: playerId,
@@ -46,11 +53,31 @@ const Character = (() => {
       .single();
 
     if (error) throw error;
+
+    const itemIds = STARTING_ITEMS[className] || [];
+    if (itemIds.length > 0) {
+      const { data: items } = await supabaseClient
+        .from('text_mmorpg_items')
+        .select('id, name, type')
+        .in('id', itemIds);
+      if (items && items.length > 0) {
+        await supabaseClient.from('text_mmorpg_inventory').insert(
+          items.map(item => ({
+            character_id: data.id,
+            item_id:      String(item.id),
+            item_name:    item.name,
+            item_type:    item.type,
+            equipped:     false,
+          }))
+        );
+      }
+    }
+
     return data;
   }
 
   async function getActive(playerId) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('text_mmorpg_characters')
       .select('*')
       .eq('player_id', playerId)
@@ -77,7 +104,7 @@ const Character = (() => {
   }
 
   async function save(character) {
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('text_mmorpg_characters')
       .update(character)
       .eq('id', character.id);
