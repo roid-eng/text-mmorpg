@@ -36,22 +36,16 @@ const Game = (() => {
     `;
   }
 
-  async function explore() {
-    // 1. zone_id 확인 — 숫자가 아니면(legacy 'zone_start' 등) 시작 지역으로 초기화
-    let zoneId = parseInt(character.zone_id);
-    if (isNaN(zoneId)) {
-      const { data: startZone, error } = await supabaseClient
-        .from('text_mmorpg_zones')
-        .select('id')
-        .eq('is_start', true)
-        .single();
-      if (error || !startZone) { log('시작 지역을 찾을 수 없습니다.', 'system'); return; }
-      zoneId = startZone.id;
-      character.zone_id = String(zoneId);
-      await Character.save(character);
-    }
+  // 전투 중 모든 버튼 비활성화 / 활성화 (Logout 제외)
+  function setActionsDisabled(disabled) {
+    document.querySelectorAll('button.btn').forEach(btn => {
+      if (btn.textContent.trim() === 'Logout') return;
+      btn.disabled = disabled;
+    });
+  }
 
-    // 2. 현재 지역 정보 조회
+  // 지역 정보 + 이동 버튼만 렌더링 (몬스터 조우 없음)
+  async function renderZone(zoneId) {
     const { data: zone, error: zoneErr } = await supabaseClient
       .from('text_mmorpg_zones')
       .select('*')
@@ -59,21 +53,18 @@ const Game = (() => {
       .single();
     if (zoneErr || !zone) { log('지역 정보를 불러올 수 없습니다.', 'system'); return; }
 
-    // 3. 연결된 방향 조회 (목적지 이름 포함)
     const { data: connections, error: connErr } = await supabaseClient
       .from('text_mmorpg_zone_connections')
       .select('id, direction, description, to_zone:to_zone_id(id, name)')
       .eq('from_zone_id', zoneId);
     if (connErr) { log('연결 정보를 불러올 수 없습니다.', 'system'); return; }
 
-    // 4. 지역 정보 로그 출력
     log(`[ ${zone.name} ]`, 'story');
     log(zone.description, 'story');
     if (zone.level_min != null && zone.level_max != null) {
       log(`레벨 권장: ${zone.level_min}~${zone.level_max}`, 'system');
     }
 
-    // 5. 방향 버튼 렌더링
     const panel   = document.getElementById('zone-actions');
     const title   = document.getElementById('zone-actions-title');
     const btnWrap = document.getElementById('zone-direction-buttons');
@@ -97,9 +88,33 @@ const Game = (() => {
     }
 
     panel.style.display = 'block';
+  }
 
-    // 6. 몬스터 조우 처리
+  // EXPLORE 클릭 시: 지역 렌더링 + 몬스터 조우
+  async function explore() {
+    let zoneId = parseInt(character.zone_id);
+    if (isNaN(zoneId)) {
+      const { data: startZone, error } = await supabaseClient
+        .from('text_mmorpg_zones')
+        .select('id')
+        .eq('is_start', true)
+        .single();
+      if (error || !startZone) { log('시작 지역을 찾을 수 없습니다.', 'system'); return; }
+      zoneId = startZone.id;
+      character.zone_id = String(zoneId);
+      await Character.save(character);
+    }
+
+    await renderZone(zoneId);
     await loadMonsters(zoneId);
+  }
+
+  // 지역 이동: 지역 렌더링만 (몬스터 조우 없음)
+  async function moveToZone(toZoneId, arrivalDescription) {
+    character.zone_id = String(toZoneId);
+    await Character.save(character);
+    if (arrivalDescription) log(arrivalDescription, 'story');
+    await renderZone(toZoneId);
   }
 
   async function loadMonsters(zoneId) {
@@ -109,13 +124,12 @@ const Game = (() => {
       .eq('zone_id', zoneId);
     if (error || !monsters || monsters.length === 0) return;
 
-    // 선공 몬스터 우선 처리 — 랜덤 1마리 자동 조우
+    // 선공 몬스터 — 랜덤 1마리 자동 조우
     const aggressive = monsters.filter(m => m.is_aggressive);
     if (aggressive.length > 0) {
       const target = aggressive[Math.floor(Math.random() * aggressive.length)];
       log(`${target.name}이(가) 달려든다!`, 'combat');
-      document.getElementById('zone-actions').style.display = 'none';
-      Combat.start(character, mapMonster(target));
+      startCombat(target);
       return;
     }
 
@@ -156,14 +170,8 @@ const Game = (() => {
 
   function startCombat(monster) {
     document.getElementById('zone-actions').style.display = 'none';
+    setActionsDisabled(true);
     Combat.start(character, mapMonster(monster));
-  }
-
-  async function moveToZone(toZoneId, arrivalDescription) {
-    character.zone_id = String(toZoneId);
-    await Character.save(character);
-    if (arrivalDescription) log(arrivalDescription, 'story');
-    await explore();
   }
 
   async function onCombatEnd(updatedChar, outcome, monster) {
@@ -189,7 +197,8 @@ const Game = (() => {
     }
 
     renderStats();
-    await explore();
+    await renderZone(parseInt(character.zone_id));
+    setActionsDisabled(false);
   }
 
   return { start, log, explore, onCombatEnd };

@@ -31,7 +31,11 @@ const Combat = (() => {
     return char.stat_str + (char.class === 'mage' ? char.stat_int : 0);
   }
 
-  function start(character, monster) {
+  function delay(ms) {
+    return new Promise(res => setTimeout(res, ms));
+  }
+
+  async function start(character, monster) {
     state = {
       character: { ...character },
       monster:   { ...monster },
@@ -41,7 +45,11 @@ const Combat = (() => {
 
     log(monster.description, 'story');
     log(`전투 시작: ${character.name} vs ${monster.name}`, 'system');
-    nextRound();
+
+    while (state && state.active) {
+      nextRound();
+      if (state && state.active) await delay(1000);
+    }
   }
 
   function nextRound() {
