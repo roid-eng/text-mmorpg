@@ -232,21 +232,28 @@ Act 4 — Reckoning
 - [x] GDD Open Questions 전체 확정
 - [x] 기술 스택 확정 (HTML/JS + Capacitor + Supabase + GitHub Pages)
 - [x] 프로젝트 구조 세팅
-- [x] Supabase 테이블 4개 생성 + RLS 적용
+- [x] Supabase 테이블 생성 + RLS 적용
 - [x] 로그인/회원가입 구현
 - [x] 캐릭터 생성 구현
 - [x] 게임 화면 진입
-- [x] EXPLORE / REST / INVENTORY 기본 동작
+- [x] EXPLORE / REST / INVENTORY / CHAT 기본 동작
 - [x] 글로벌 채팅 Realtime 구현
+- [x] 노드 방식 지역 이동 구현
+- [x] 몬스터 조우 시스템 (선공/비선공)
+- [x] 전투 라운드 1초 딜레이
+- [x] 전투 중 버튼 비활성화(음영) 처리
+- [x] 지역 진입 시 즉시 지역 정보 표시
 
 ## 다음 세션 작업 목록 (우선순위 순)
-- [ ] EXPLORE 실제 콘텐츠 연결 (지역 이동, 몬스터 조우)
-- [ ] 전투 시스템 검증 (자동 전투 + 스킬 개입)
+- [ ] 상단 헤더 지역 숫자 → 지역명으로 표시 수정
+- [ ] 경험치 획득 및 레벨업 동작 확인
 - [ ] 장비 드롭 시스템 구현
 - [ ] 랭킹 시스템 구현
+- [ ] def 방어력 전투 적용
+- [ ] 전투 UI 개선 (전투 전용 패널 — Phase 2)
 - [ ] pg_cron 채팅 24시간 자동 삭제 설정
 - [ ] 출시 전 이메일 인증 복구 (DB 트리거 방식)
 
 ---
 
-*Last updated: 2026-04-06*
+*Last updated: 2026-04-07*
