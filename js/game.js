@@ -181,7 +181,6 @@ const Game = (() => {
   }
 
   function startCombat(monster) {
-    document.getElementById('zone-actions').style.display = 'none';
     setActionsDisabled(true);
     Combat.start(character, mapMonster(monster));
   }
