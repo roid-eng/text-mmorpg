@@ -5,6 +5,7 @@
 const Game = (() => {
   let character = null;
   let logEl = null;
+  let currentZoneName = null;
 
   function log(text, type = '') {
     if (!logEl) return;
@@ -21,7 +22,7 @@ const Game = (() => {
     Combat.setLogHandler(log);
 
     log(`Mytharion에 오신 것을 환영합니다, ${character.name}.`, 'story');
-    log(`직업: ${character.class}  |  레벨: ${character.level}  |  지역: ${character.zone_id}`, 'system');
+    log(`직업: ${character.class}  |  레벨: ${character.level}`, 'system');
     renderStats();
   }
 
@@ -33,6 +34,7 @@ const Game = (() => {
       Lv.${character.level} ${character.class}
       &nbsp;|&nbsp; HP ${character.hp}/${character.hp_max}
       &nbsp;|&nbsp; MP ${character.mp}/${character.mp_max}
+      ${currentZoneName ? `&nbsp;|&nbsp; 지역: ${currentZoneName}` : ''}
     `;
   }
 
@@ -52,6 +54,9 @@ const Game = (() => {
       .eq('id', zoneId)
       .single();
     if (zoneErr || !zone) { log('지역 정보를 불러올 수 없습니다.', 'system'); return; }
+
+    currentZoneName = zone.name;
+    renderStats();
 
     const { data: connections, error: connErr } = await supabaseClient
       .from('text_mmorpg_zone_connections')
