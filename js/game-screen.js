@@ -6,6 +6,7 @@
   const session   = await Auth.getSession();
   const character = await Character.getActive(session.user.id);
   await Game.start(character);
+  await Game.showZone();
   subscribeChat();
 })();
 

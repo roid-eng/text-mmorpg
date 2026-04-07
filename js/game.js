@@ -90,8 +90,8 @@ const Game = (() => {
     panel.style.display = 'block';
   }
 
-  // EXPLORE 클릭 시: 지역 렌더링 + 몬스터 조우
-  async function explore() {
+  // zone_id 초기화 후 zoneId(int) 반환
+  async function resolveZoneId() {
     let zoneId = parseInt(character.zone_id);
     if (isNaN(zoneId)) {
       const { data: startZone, error } = await supabaseClient
@@ -99,12 +99,24 @@ const Game = (() => {
         .select('id')
         .eq('is_start', true)
         .single();
-      if (error || !startZone) { log('시작 지역을 찾을 수 없습니다.', 'system'); return; }
+      if (error || !startZone) { log('시작 지역을 찾을 수 없습니다.', 'system'); return null; }
       zoneId = startZone.id;
       character.zone_id = String(zoneId);
       await Character.save(character);
     }
+    return zoneId;
+  }
 
+  // 초기 로드 / 이동 후: 지역 정보 + 이동 버튼만 표시
+  async function showZone() {
+    const zoneId = await resolveZoneId();
+    if (zoneId) await renderZone(zoneId);
+  }
+
+  // EXPLORE 클릭 시: 지역 렌더링 + 몬스터 조우
+  async function explore() {
+    const zoneId = await resolveZoneId();
+    if (!zoneId) return;
     await renderZone(zoneId);
     await loadMonsters(zoneId);
   }
@@ -201,5 +213,5 @@ const Game = (() => {
     setActionsDisabled(false);
   }
 
-  return { start, log, explore, onCombatEnd };
+  return { start, log, showZone, explore, onCombatEnd };
 })();
