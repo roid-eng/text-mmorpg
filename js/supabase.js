@@ -42,6 +42,19 @@
  *
  * ----------------------------------------------------------------
  *
+ * [text_mmorpg_items]
+ * Static item definitions. Dropped in specific zones.
+ *
+ *   id            uuid    PK, default gen_random_uuid()
+ *   name          text    NOT NULL
+ *   type          text    'weapon' | 'armor' | 'consumable' | 'etc'
+ *   atk_bonus     int     NOT NULL default 0
+ *   def_bonus     int     NOT NULL default 0
+ *   drop_zone_id  int     FK → text_mmorpg_zones(id)
+ *   created_at    timestamptz default now()
+ *
+ * ----------------------------------------------------------------
+ *
  * [text_mmorpg_inventory]
  * Items held by a character.
  *
@@ -97,6 +110,17 @@
  *   mp_max     int  NOT NULL,
  *   zone_id    text NOT NULL DEFAULT 'zone_start',
  *   created_at timestamptz NOT NULL DEFAULT now()
+ * );
+ *
+ * -- Items
+ * CREATE TABLE text_mmorpg_items (
+ *   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ *   name         text NOT NULL,
+ *   type         text NOT NULL CHECK (type IN ('weapon','armor','consumable','etc')),
+ *   atk_bonus    int  NOT NULL DEFAULT 0,
+ *   def_bonus    int  NOT NULL DEFAULT 0,
+ *   drop_zone_id int  REFERENCES text_mmorpg_zones(id),
+ *   created_at   timestamptz NOT NULL DEFAULT now()
  * );
  *
  * -- Inventory
@@ -157,6 +181,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 // Supabase JS v2 loaded via CDN in HTML, or import via npm:
 // import { createClient } from '@supabase/supabase-js'
-const supabase = window.supabase
+const supabaseClient = window.supabase
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;

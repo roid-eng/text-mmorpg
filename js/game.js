@@ -6,6 +6,7 @@ const Game = (() => {
   let character = null;
   let logEl = null;
   let currentZoneName = null;
+  let equippedBonuses = { atk: 0, def: 0 };
 
   function log(text, type = '') {
     if (!logEl) return;
@@ -35,6 +36,9 @@ const Game = (() => {
       &nbsp;|&nbsp; HP ${character.hp}/${character.hp_max}
       &nbsp;|&nbsp; MP ${character.mp}/${character.mp_max}
       ${currentZoneName ? `&nbsp;|&nbsp; 지역: ${currentZoneName}` : ''}
+      ${(equippedBonuses.atk > 0 || equippedBonuses.def > 0)
+        ? `&nbsp;|&nbsp; <span class="amber">ATK+${equippedBonuses.atk} DEF+${equippedBonuses.def}</span>`
+        : ''}
     `;
   }
 
@@ -204,6 +208,24 @@ const Game = (() => {
         log(`레벨 업! → Lv.${character.level}`, 'system');
       }
       await Character.save(character);
+
+      // 장비 드롭 (40% 확률)
+      const zoneId = parseInt(character.zone_id);
+      const { data: zoneItems } = await supabaseClient
+        .from('text_mmorpg_items')
+        .select('*')
+        .eq('drop_zone_id', zoneId);
+      if (zoneItems && zoneItems.length > 0 && Math.random() < 0.4) {
+        const dropped = zoneItems[Math.floor(Math.random() * zoneItems.length)];
+        await supabaseClient.from('text_mmorpg_inventory').insert({
+          character_id: character.id,
+          item_id:      String(dropped.id),
+          item_name:    dropped.name,
+          item_type:    dropped.type,
+          equipped:     false,
+        });
+        log(`💰 ${dropped.name} 을 획득했습니다!`, 'loot');
+      }
     } else if (outcome === 'defeat') {
       character.hp = Math.floor(character.hp_max * 0.3);
       const { data: startZone } = await supabaseClient
@@ -220,5 +242,75 @@ const Game = (() => {
     setActionsDisabled(false);
   }
 
-  return { start, log, showZone, explore, onCombatEnd };
+  async function showInventory() {
+    const panel = document.getElementById('inventory-panel');
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+
+    const list = document.getElementById('inventory-list');
+    list.innerHTML = '<span class="muted">불러오는 중...</span>';
+    panel.style.display = 'block';
+
+    const { data: rows, error } = await supabaseClient
+      .from('text_mmorpg_inventory')
+      .select('*')
+      .eq('character_id', character.id)
+      .order('created_at', { ascending: false });
+
+    if (error) { list.innerHTML = '<span class="muted">불러오기 실패</span>'; return; }
+    if (!rows || rows.length === 0) { list.innerHTML = '<span class="muted">아이템이 없습니다.</span>'; return; }
+
+    // 아이템 정의에서 bonus 조회
+    const itemIds = [...new Set(rows.map(r => r.item_id))];
+    const { data: itemDefs } = await supabaseClient
+      .from('text_mmorpg_items')
+      .select('id, atk_bonus, def_bonus')
+      .in('id', itemIds);
+    const itemMap = {};
+    (itemDefs || []).forEach(i => { itemMap[String(i.id)] = i; });
+
+    list.innerHTML = '';
+    rows.forEach(row => {
+      const def = itemMap[row.item_id] || {};
+      const bonusParts = [];
+      if (def.atk_bonus) bonusParts.push(`ATK+${def.atk_bonus}`);
+      if (def.def_bonus) bonusParts.push(`DEF+${def.def_bonus}`);
+      const bonusStr = bonusParts.join(' ');
+
+      const line = document.createElement('div');
+      line.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:3px 0;';
+      line.innerHTML = `
+        <span>- ${row.item_name} (${row.item_type})${bonusStr ? ` <span class="amber">${bonusStr}</span>` : ''}</span>
+        ${row.equipped
+          ? '<span class="muted" style="font-size:0.75rem; padding:2px 8px;">장착중</span>'
+          : `<button class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="Game.equipItem('${row.id}', '${row.item_id}')">[ 장착 ]</button>`}
+      `;
+      list.appendChild(line);
+    });
+  }
+
+  async function equipItem(inventoryId, itemId) {
+    const { data: item } = await supabaseClient
+      .from('text_mmorpg_items')
+      .select('name, atk_bonus, def_bonus')
+      .eq('id', itemId)
+      .single();
+
+    await supabaseClient
+      .from('text_mmorpg_inventory')
+      .update({ equipped: true })
+      .eq('id', inventoryId);
+
+    if (item) {
+      equippedBonuses.atk += item.atk_bonus || 0;
+      equippedBonuses.def += item.def_bonus || 0;
+      log(`${item.name} 을 장착했습니다.`, 'system');
+    }
+
+    renderStats();
+    // 인벤토리 패널 닫고 다시 열어 새로고침
+    document.getElementById('inventory-panel').style.display = 'none';
+    await showInventory();
+  }
+
+  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem };
 })();

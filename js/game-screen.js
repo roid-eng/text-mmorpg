@@ -20,7 +20,7 @@ function actionRest() {
 }
 
 function actionInventory() {
-  Game.log('[인벤토리] — 준비 중', 'system');
+  Game.showInventory();
 }
 
 function actionChat() {
