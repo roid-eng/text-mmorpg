@@ -141,21 +141,11 @@ const Game = (() => {
       .eq('zone_id', zoneId);
     if (error || !monsters || monsters.length === 0) return;
 
-    // 선공 몬스터 — 랜덤 1마리 자동 조우
-    const aggressive = monsters.filter(m => m.is_aggressive);
-    if (aggressive.length > 0) {
-      const target = aggressive[Math.floor(Math.random() * aggressive.length)];
-      log(`${target.name}이(가) 달려든다!`, 'combat');
-      startCombat(target);
-      return;
-    }
+    const btnWrap = document.getElementById('zone-direction-buttons');
 
-    // 비선공 몬스터 — 선택 버튼 출력
+    // 비선공 몬스터 — 항상 선택 버튼 표시
     const passive = monsters.filter(m => !m.is_aggressive);
     if (passive.length > 0) {
-      log('주변에서 발견된 것들:', 'system');
-      const btnWrap = document.getElementById('zone-direction-buttons');
-
       const sep = document.createElement('div');
       sep.className = 'panel-title';
       sep.style.marginTop = '8px';
@@ -169,6 +159,19 @@ const Game = (() => {
         btn.onclick = () => startCombat(m);
         btnWrap.appendChild(btn);
       });
+    }
+
+    // 선공 몬스터 — 30% 확률 조우
+    const aggressive = monsters.filter(m => m.is_aggressive);
+    if (aggressive.length > 0) {
+      if (Math.random() < 0.3) {
+        const target = aggressive[Math.floor(Math.random() * aggressive.length)];
+        log(`⚠ ${target.name}이(가) 달려든다!`, 'combat');
+        startCombat(target);
+        return;
+      } else {
+        log('주변이 조용하다.', 'system');
+      }
     }
   }
 
