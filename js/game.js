@@ -143,13 +143,14 @@ const Game = (() => {
 
   function mapMonster(m) {
     return {
-      name:       m.name,
+      name:        m.name,
       description: m.description || `${m.name}과 마주쳤다.`,
-      hp:         m.hp_max,
-      hp_max:     m.hp_max,
-      atk:        m.atk,
-      expReward:  m.exp_reward,
-      loot:       null,
+      hp:          m.hp,
+      hp_max:      m.hp,
+      atk:         m.atk,
+      def:         m.def,
+      expReward:   m.exp,
+      loot:        null,
     };
   }
 
