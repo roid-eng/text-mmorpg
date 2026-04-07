@@ -45,12 +45,19 @@
  * [text_mmorpg_items]
  * Static item definitions. Dropped in specific zones.
  *
- *   id            uuid    PK, default gen_random_uuid()
- *   name          text    NOT NULL
- *   type          text    'weapon' | 'armor' | 'consumable' | 'etc'
- *   atk_bonus     int     NOT NULL default 0
- *   def_bonus     int     NOT NULL default 0
- *   drop_zone_id  int     FK → text_mmorpg_zones(id)
+ *   id            int(SERIAL) PK
+ *   name          text        NOT NULL
+ *   description   text
+ *   type          text        'weapon' | 'armor' | 'consumable' | 'etc'
+ *   stat_str      int         NOT NULL default 0
+ *   stat_con      int         NOT NULL default 0
+ *   stat_dex      int         NOT NULL default 0
+ *   stat_int      int         NOT NULL default 0
+ *   stat_wiz      int         NOT NULL default 0
+ *   atk_bonus     int         NOT NULL default 0
+ *   def_bonus     int         NOT NULL default 0
+ *   level_req     int         NOT NULL default 1
+ *   drop_zone_id  int         FK → text_mmorpg_zones(id)
  *   created_at    timestamptz default now()
  *
  * ----------------------------------------------------------------
@@ -114,11 +121,18 @@
  *
  * -- Items
  * CREATE TABLE text_mmorpg_items (
- *   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ *   id           SERIAL PRIMARY KEY,
  *   name         text NOT NULL,
+ *   description  text,
  *   type         text NOT NULL CHECK (type IN ('weapon','armor','consumable','etc')),
+ *   stat_str     int  NOT NULL DEFAULT 0,
+ *   stat_con     int  NOT NULL DEFAULT 0,
+ *   stat_dex     int  NOT NULL DEFAULT 0,
+ *   stat_int     int  NOT NULL DEFAULT 0,
+ *   stat_wiz     int  NOT NULL DEFAULT 0,
  *   atk_bonus    int  NOT NULL DEFAULT 0,
  *   def_bonus    int  NOT NULL DEFAULT 0,
+ *   level_req    int  NOT NULL DEFAULT 1,
  *   drop_zone_id int  REFERENCES text_mmorpg_zones(id),
  *   created_at   timestamptz NOT NULL DEFAULT now()
  * );

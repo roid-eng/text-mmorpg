@@ -264,7 +264,7 @@ const Game = (() => {
     const { data: itemDefs } = await supabaseClient
       .from('text_mmorpg_items')
       .select('id, atk_bonus, def_bonus')
-      .in('id', itemIds);
+      .in('id', itemIds.map(Number));
     const itemMap = {};
     (itemDefs || []).forEach(i => { itemMap[String(i.id)] = i; });
 
@@ -292,7 +292,7 @@ const Game = (() => {
     const { data: item } = await supabaseClient
       .from('text_mmorpg_items')
       .select('name, atk_bonus, def_bonus')
-      .eq('id', itemId)
+      .eq('id', parseInt(itemId))
       .single();
 
     await supabaseClient
