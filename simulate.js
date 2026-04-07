@@ -31,9 +31,9 @@ function makeCharacter(cls) {
 
 // ── 아르단 평야 몬스터 3종 ───────────────────────────────────────────────
 const MONSTERS = [
-  { name: '들쥐',    hp: 18, atk: 4,  def: 1, stat_con: 3 },
-  { name: '늑대',    hp: 32, atk: 7,  def: 2, stat_con: 5 },
-  { name: '오크 척후병', hp: 55, atk: 11, def: 5, stat_con: 8 },
+  { name: '들쥐',       hp: 18, atk: 4,  def: 1, stat_con: 3 },
+  { name: '초원 늑대',  hp: 32, atk: 7,  def: 2, stat_con: 5 },
+  { name: '광폭한 멧돼지', hp: 55, atk: 11, def: 5, stat_con: 8 },
 ];
 
 // ── 전투 공식 (combat.js와 동일 로직) ────────────────────────────────────
@@ -65,15 +65,23 @@ function calcMonsterDmg(monster, char) {
 function simulate(cls, monster) {
   const char = makeCharacter(cls);
   const mob  = { ...monster };
+  let rounds = 0;
+
+  // 궁수 선제 공격
+  if (cls === 'archer') {
+    mob.hp -= calcPlayerDmg(char, mob.def, mob.stat_con);
+    if (mob.hp <= 0) return { outcome: 'victory', rounds: 0, remainHp: char.hp };
+  }
 
   for (let round = 1; round <= 200; round++) {
+    rounds = round;
     // 플레이어 공격
     mob.hp -= calcPlayerDmg(char, mob.def, mob.stat_con);
-    if (mob.hp <= 0) return { outcome: 'victory', rounds: round, remainHp: char.hp };
+    if (mob.hp <= 0) return { outcome: 'victory', rounds, remainHp: char.hp };
 
     // 몬스터 공격
     char.hp -= calcMonsterDmg(mob, char);
-    if (char.hp <= 0) return { outcome: 'defeat', rounds: round, remainHp: 0 };
+    if (char.hp <= 0) return { outcome: 'defeat', rounds, remainHp: 0 };
   }
   return { outcome: 'timeout', rounds: 200, remainHp: char.hp };
 }

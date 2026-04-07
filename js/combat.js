@@ -64,6 +64,14 @@ const Combat = (() => {
     log(monster.description, 'story');
     log(`전투 시작: ${character.name} vs ${monster.name}`, 'system');
 
+    // 궁수 선제 공격
+    if (state.character.class === 'archer') {
+      const preemptDmg = calcPlayerDmg(state.character, state.monster.def, state.monster.stat_con);
+      state.monster.hp = Math.max(0, state.monster.hp - preemptDmg);
+      log(`[선제 사격] ${state.character.name}의 공격 → ${state.monster.name} -${preemptDmg} HP (${state.monster.hp}/${state.monster.hp_max})`, 'combat');
+      if (state.monster.hp <= 0) { resolve('victory'); return; }
+    }
+
     while (state && state.active) {
       nextRound();
       if (state && state.active) await delay(1000);
