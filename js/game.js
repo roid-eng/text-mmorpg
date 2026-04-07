@@ -74,9 +74,9 @@ const Game = (() => {
     }
 
     // 5. 방향 버튼 렌더링
-    const panel     = document.getElementById('zone-actions');
-    const title     = document.getElementById('zone-actions-title');
-    const btnWrap   = document.getElementById('zone-direction-buttons');
+    const panel   = document.getElementById('zone-actions');
+    const title   = document.getElementById('zone-actions-title');
+    const btnWrap = document.getElementById('zone-direction-buttons');
 
     title.textContent = '이동';
     btnWrap.innerHTML = '';
@@ -97,21 +97,75 @@ const Game = (() => {
     }
 
     panel.style.display = 'block';
+
+    // 6. 몬스터 조우 처리
+    await loadMonsters(zoneId);
+  }
+
+  async function loadMonsters(zoneId) {
+    const { data: monsters, error } = await supabaseClient
+      .from('text_mmorpg_monsters')
+      .select('*')
+      .eq('zone_id', zoneId);
+    if (error || !monsters || monsters.length === 0) return;
+
+    // 선공 몬스터 우선 처리 — 랜덤 1마리 자동 조우
+    const aggressive = monsters.filter(m => m.is_aggressive);
+    if (aggressive.length > 0) {
+      const target = aggressive[Math.floor(Math.random() * aggressive.length)];
+      log(`${target.name}이(가) 달려든다!`, 'combat');
+      document.getElementById('zone-actions').style.display = 'none';
+      Combat.start(character, mapMonster(target));
+      return;
+    }
+
+    // 비선공 몬스터 — 선택 버튼 출력
+    const passive = monsters.filter(m => !m.is_aggressive);
+    if (passive.length > 0) {
+      log('주변에서 발견된 것들:', 'system');
+      const btnWrap = document.getElementById('zone-direction-buttons');
+
+      const sep = document.createElement('div');
+      sep.className = 'panel-title';
+      sep.style.marginTop = '8px';
+      sep.textContent = '전투';
+      btnWrap.appendChild(sep);
+
+      passive.forEach(m => {
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.textContent = `[ ${m.name}와 싸우기 ]`;
+        btn.onclick = () => startCombat(m);
+        btnWrap.appendChild(btn);
+      });
+    }
+  }
+
+  function mapMonster(m) {
+    return {
+      name:       m.name,
+      description: m.description || `${m.name}과 마주쳤다.`,
+      hp:         m.hp_max,
+      hp_max:     m.hp_max,
+      atk:        m.atk,
+      expReward:  m.exp_reward,
+      loot:       null,
+    };
+  }
+
+  function startCombat(monster) {
+    document.getElementById('zone-actions').style.display = 'none';
+    Combat.start(character, mapMonster(monster));
   }
 
   async function moveToZone(toZoneId, arrivalDescription) {
-    // 캐릭터 zone_id 업데이트
     character.zone_id = String(toZoneId);
     await Character.save(character);
-
-    // 이동 묘사 출력
     if (arrivalDescription) log(arrivalDescription, 'story');
-
-    // 새 지역 탐색으로 이어서 렌더링
     await explore();
   }
 
-  function onCombatEnd(updatedChar, outcome, monster) {
+  async function onCombatEnd(updatedChar, outcome, monster) {
     character = { ...character, ...updatedChar };
 
     if (outcome === 'victory') {
@@ -121,14 +175,20 @@ const Game = (() => {
         character = Character.levelUpStats(character);
         log(`레벨 업! → Lv.${character.level}`, 'system');
       }
-      Character.save(character);
+      await Character.save(character);
     } else if (outcome === 'defeat') {
       character.hp = Math.floor(character.hp_max * 0.3);
-      character.zone_id = 'zone_start';
-      Character.save(character);
+      const { data: startZone } = await supabaseClient
+        .from('text_mmorpg_zones')
+        .select('id')
+        .eq('is_start', true)
+        .single();
+      character.zone_id = startZone ? String(startZone.id) : character.zone_id;
+      await Character.save(character);
     }
 
     renderStats();
+    await explore();
   }
 
   return { start, log, explore, onCombatEnd };

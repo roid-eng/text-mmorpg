@@ -92,7 +92,7 @@ const Combat = (() => {
         state.monster.loot.forEach(item => log(`아이템 획득: ${item.name}`, 'loot'));
       }
     } else if (outcome === 'defeat') {
-      log('쓰러졌습니다... 마을로 귀환합니다.', 'system');
+      log('쓰러졌습니다. 체력을 회복하십시오.', 'system');
     }
 
     Game.onCombatEnd(state.character, outcome, state.monster);
