@@ -281,7 +281,7 @@ const Game = (() => {
       line.innerHTML = `
         <span>- ${row.item_name} (${row.item_type})${bonusStr ? ` <span class="amber">${bonusStr}</span>` : ''}</span>
         ${row.equipped
-          ? '<span class="muted" style="font-size:0.75rem; padding:2px 8px;">장착중</span>'
+          ? `<button class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="Game.unequipItem('${row.id}', '${row.item_id}')">[ 해제 ]</button>`
           : `<button class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="Game.equipItem('${row.id}', '${row.item_id}')">[ 장착 ]</button>`}
       `;
       list.appendChild(line);
@@ -312,5 +312,28 @@ const Game = (() => {
     await showInventory();
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem };
+  async function unequipItem(inventoryId, itemId) {
+    const { data: item } = await supabaseClient
+      .from('text_mmorpg_items')
+      .select('name, atk_bonus, def_bonus')
+      .eq('id', parseInt(itemId))
+      .single();
+
+    await supabaseClient
+      .from('text_mmorpg_inventory')
+      .update({ equipped: false })
+      .eq('id', inventoryId);
+
+    if (item) {
+      equippedBonuses.atk = Math.max(0, equippedBonuses.atk - (item.atk_bonus || 0));
+      equippedBonuses.def = Math.max(0, equippedBonuses.def - (item.def_bonus || 0));
+      log(`${item.name} 을 해제했습니다.`, 'system');
+    }
+
+    renderStats();
+    document.getElementById('inventory-panel').style.display = 'none';
+    await showInventory();
+  }
+
+  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem };
 })();
