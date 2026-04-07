@@ -21,14 +21,32 @@ const Combat = (() => {
     onLog(text, type);
   }
 
-  function rollDmg(atk, variance = 0.2) {
-    const low  = Math.floor(atk * (1 - variance));
-    const high = Math.ceil(atk  * (1 + variance));
-    return Math.max(1, low + Math.floor(Math.random() * (high - low + 1)));
+  function calcPlayerDmg(char, monsterDef, monsterCon) {
+    const atk = char.atk || 0;
+    const cls = char.class;
+
+    if (cls === 'mage' || cls === 'cleric') {
+      // 마법 데미지: DEF 관통
+      const stat_int = cls === 'mage' ? char.stat_int : char.stat_wiz;
+      return Math.max(1,
+        Math.floor((atk + stat_int * 0.5) * (0.85 + Math.random() * 0.3))
+      );
+    } else {
+      // 물리 데미지
+      const atk_stat = cls === 'warrior' ? char.stat_str : char.stat_dex;
+      const def = monsterDef || 0;
+      const con = monsterCon || 0;
+      return Math.max(1,
+        Math.floor((atk + atk_stat * 0.5) * (0.85 + Math.random() * 0.3))
+        - Math.floor(def + con * 0.3)
+      );
+    }
   }
 
-  function calcPlayerAtk(char) {
-    return char.stat_str + (char.class === 'mage' ? char.stat_int : 0);
+  function calcMonsterDmg(monster, char) {
+    const dodge_chance = Math.min(0.3, (char.stat_dex || 0) * 0.005);
+    if (Math.random() < dodge_chance) return null; // 회피
+    return Math.max(1, Math.floor(monster.atk * (0.85 + Math.random() * 0.3)));
   }
 
   function delay(ms) {
@@ -58,16 +76,20 @@ const Combat = (() => {
     log(`── 라운드 ${state.round} ──`, 'system');
 
     // Player auto-attack
-    const playerDmg = rollDmg(calcPlayerAtk(state.character));
+    const playerDmg = calcPlayerDmg(state.character, state.monster.def, state.monster.stat_con);
     state.monster.hp = Math.max(0, state.monster.hp - playerDmg);
     log(`${state.character.name}의 공격 → ${monster().name} -${playerDmg} HP (${monster().hp}/${monster().hp_max})`, 'combat');
 
     if (monster().hp <= 0) { resolve('victory'); return; }
 
     // Monster auto-attack
-    const monsterDmg = rollDmg(state.monster.atk);
-    state.character.hp = Math.max(0, state.character.hp - monsterDmg);
-    log(`${monster().name}의 공격 → ${state.character.name} -${monsterDmg} HP (${state.character.hp}/${state.character.hp_max})`, 'combat');
+    const monsterDmg = calcMonsterDmg(state.monster, state.character);
+    if (monsterDmg === null) {
+      log(`${state.character.name}이(가) 공격을 회피했다!`, 'combat');
+    } else {
+      state.character.hp = Math.max(0, state.character.hp - monsterDmg);
+      log(`${monster().name}의 공격 → ${state.character.name} -${monsterDmg} HP (${state.character.hp}/${state.character.hp_max})`, 'combat');
+    }
 
     if (state.character.hp <= 0) { resolve('defeat'); return; }
   }
