@@ -322,23 +322,48 @@ const Game = (() => {
   async function equipItem(inventoryId, itemId) {
     const { data: item } = await supabaseClient
       .from('text_mmorpg_items')
-      .select('name, atk_bonus, def_bonus')
+      .select('name, type, atk_bonus, def_bonus')
       .eq('id', parseInt(itemId))
       .single();
 
+    if (!item) return;
+
+    // 같은 타입의 기존 장착 아이템 조회
+    const { data: sameTypeEquipped } = await supabaseClient
+      .from('text_mmorpg_inventory')
+      .select('id, item_id')
+      .eq('character_id', character.id)
+      .eq('equipped', true)
+      .eq('item_type', item.type);
+
+    if (sameTypeEquipped && sameTypeEquipped.length > 0) {
+      // 기존 장착 해제 + 보너스 제거
+      const oldItemIds = sameTypeEquipped.map(r => Number(r.item_id));
+      const { data: oldItemDefs } = await supabaseClient
+        .from('text_mmorpg_items')
+        .select('id, atk_bonus, def_bonus')
+        .in('id', oldItemIds);
+      (oldItemDefs || []).forEach(old => {
+        equippedBonuses.atk = Math.max(0, equippedBonuses.atk - (old.atk_bonus || 0));
+        equippedBonuses.def = Math.max(0, equippedBonuses.def - (old.def_bonus || 0));
+      });
+      await supabaseClient
+        .from('text_mmorpg_inventory')
+        .update({ equipped: false })
+        .in('id', sameTypeEquipped.map(r => r.id));
+    }
+
+    // 새 아이템 장착
     await supabaseClient
       .from('text_mmorpg_inventory')
       .update({ equipped: true })
       .eq('id', inventoryId);
 
-    if (item) {
-      equippedBonuses.atk += item.atk_bonus || 0;
-      equippedBonuses.def += item.def_bonus || 0;
-      log(`${item.name} 을 장착했습니다.`, 'system');
-    }
+    equippedBonuses.atk += item.atk_bonus || 0;
+    equippedBonuses.def += item.def_bonus || 0;
+    log(`${item.name} 을 장착했습니다.`, 'system');
 
     renderStats();
-    // 인벤토리 패널 닫고 다시 열어 새로고침
     document.getElementById('inventory-panel').style.display = 'none';
     await showInventory();
   }
