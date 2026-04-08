@@ -4,15 +4,15 @@
 
 const Auth = (() => {
   async function getSession() {
-    const { data } = await supabase.auth.getSession();
+    const { data } = await supabaseClient.auth.getSession();
     return data?.session ?? null;
   }
 
   async function signUp(email, password, username, language = 'en') {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabaseClient.auth.signUp({ email, password });
     if (error) throw error;
 
-    const { error: profileError } = await supabase
+    const { error: profileError } = await supabaseClient
       .from('text_mmorpg_players')
       .insert({ id: data.user.id, username, language });
     if (profileError) throw profileError;
@@ -21,10 +21,10 @@ const Auth = (() => {
   }
 
   async function signIn(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) throw error;
 
-    await supabase
+    await supabaseClient
       .from('text_mmorpg_players')
       .update({ last_login: new Date().toISOString() })
       .eq('id', data.user.id);
@@ -33,7 +33,7 @@ const Auth = (() => {
   }
 
   async function signOut() {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabaseClient.auth.signOut();
     if (error) throw error;
     window.location.reload();
   }

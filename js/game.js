@@ -68,12 +68,13 @@ const Game = (() => {
     `;
   }
 
-  // 전투 중 액션 버튼 비활성화 / 활성화 (Logout, 후퇴 버튼 제외)
+  // 전투 중 액션 버튼 비활성화 / 활성화 (전투 패널 내부, Logout, 후퇴 버튼 제외)
   function setActionsDisabled(disabled) {
+    const combatPanel = document.getElementById('combat-panel');
     document.querySelectorAll('button.btn').forEach(btn => {
-      const text = btn.textContent.trim();
-      if (text === 'Logout') return;
-      if (text === '[ 후퇴 ]') return;
+      if (btn.textContent.trim() === 'Logout') return;
+      if (btn.textContent.trim() === '[ 후퇴 ]') return;
+      if (combatPanel && combatPanel.contains(btn)) return; // 스킬/공격 버튼은 Combat이 직접 관리
       btn.disabled = disabled;
     });
   }
@@ -215,14 +216,23 @@ const Game = (() => {
       hp_max:      m.hp,
       atk:         m.atk,
       def:         m.def,
+      stat_con:    m.stat_con || 0,
       expReward:   m.exp,
       loot:        null,
     };
   }
 
-  function startCombat(monster) {
+  async function startCombat(monster) {
+    // 현재 직업 + 레벨 이하 스킬 로드
+    const { data: skills } = await supabaseClient
+      .from('text_mmorpg_skills')
+      .select('*')
+      .eq('class', character.class)
+      .lte('unlock_level', character.level)
+      .order('unlock_level', { ascending: true });
+
     setActionsDisabled(true);
-    Combat.start(character, mapMonster(monster));
+    Combat.start(character, mapMonster(monster), skills || []);
   }
 
   async function onCombatEnd(updatedChar, outcome, monster) {
