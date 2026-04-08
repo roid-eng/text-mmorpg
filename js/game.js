@@ -24,6 +24,11 @@ const Game = (() => {
 
     await restoreEquippedBonuses();
 
+    Combat.setStatsHandler(updatedChar => {
+      character = { ...character, hp: updatedChar.hp, mp: updatedChar.mp };
+      renderStats();
+    });
+
     log(`Mytharion에 오신 것을 환영합니다, ${character.name}.`, 'story');
     log(`직업: ${character.class}  |  레벨: ${character.level}`, 'system');
     renderStats();
@@ -226,7 +231,7 @@ const Game = (() => {
       const expNeeded = character.level * 100;
       if (character.exp >= expNeeded) {
         character = Character.levelUpStats(character);
-        log(`레벨 업! → Lv.${character.level}`, 'system');
+        log(`레벨 업! → Lv.${character.level}`, 'levelup');
       }
       await Character.save(character);
 
@@ -245,8 +250,10 @@ const Game = (() => {
           item_type:    dropped.type,
           equipped:     false,
         });
-        log(`💰 ${dropped.name} 을 획득했습니다!`, 'loot');
+        log(`${dropped.name} 을 획득했습니다!`, 'item');
       }
+    } else if (outcome === 'retreat') {
+      await Character.save(character);
     } else if (outcome === 'defeat') {
       character.hp = Math.floor(character.hp_max * 0.3);
       const { data: startZone } = await supabaseClient

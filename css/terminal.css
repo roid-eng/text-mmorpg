@@ -190,11 +190,16 @@
   background: var(--amber-dim);
 }
 
-.log-line-system  { color: var(--amber); }
-.log-line-combat  { color: #e88080; }
-.log-line-loot    { color: var(--success); }
-.log-line-story   { color: var(--text); font-style: italic; }
-.log-line-chat    { color: #80c8e8; }
+.log-line-system         { color: var(--amber); }
+.log-line-combat         { color: #e88080; }
+.log-line-loot           { color: var(--success); }
+.log-line-story          { color: var(--text); font-style: italic; }
+.log-line-chat           { color: #80c8e8; }
+.log-line-player-attack  { color: #e8a020; }
+.log-line-monster-attack { color: #ff4444; }
+.log-line-dodge          { color: #44ff88; }
+.log-line-levelup        { color: #ffff44; }
+.log-line-item           { color: #44ccff; }
 
 /* ------------------------------------------------------------
    Stat bars

@@ -16,6 +16,22 @@
     <div id="zone-direction-buttons" style="display:flex; flex-direction:column; gap:6px;"></div>
   </div>
 
+  <!-- Combat panel -->
+  <div class="panel" id="combat-panel" style="display:none;">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+      <span id="combat-monster-name" class="amber" style="font-size:1rem; letter-spacing:0.1em;"></span>
+      <span id="combat-hp-text" class="muted" style="font-size:0.8rem;"></span>
+    </div>
+    <div class="stat-bar" style="margin-bottom:12px;">
+      <div id="combat-hp-bar-fill" class="stat-bar-fill hp" style="width:100%;"></div>
+    </div>
+    <div class="log" id="combat-log" style="height:200px;"></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
+      <button class="btn" onclick="Combat.manualAttack()">[ 기본 공격 ]</button>
+      <button class="btn btn-danger" onclick="Combat.retreat()">[ 후퇴 ]</button>
+    </div>
+  </div>
+
   <!-- Inventory panel -->
   <div class="panel" id="inventory-panel" style="display:none;">
     <div class="panel-title">[ 인벤토리 ]</div>
