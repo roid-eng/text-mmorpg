@@ -191,8 +191,22 @@ const Combat = (() => {
     state = null;
   }
 
+  // 스킬 버튼 동적 렌더링 (스킬 시스템 구현 후 연결 예정)
+  function renderSkillButtons(skills = []) {
+    const wrap = document.getElementById('skill-buttons');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    skills.forEach(skill => {
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.textContent = `[ ${skill.name} ]`;
+      btn.onclick = () => useSkill(skill);
+      wrap.appendChild(btn);
+    });
+  }
+
   function monster() { return state.monster; }
   function getState() { return state; }
 
-  return { start, nextRound, useSkill, retreat, manualAttack, setLogHandler, setStatsHandler, getState };
+  return { start, nextRound, useSkill, retreat, manualAttack, renderSkillButtons, setLogHandler, setStatsHandler, getState };
 })();

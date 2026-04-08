@@ -68,10 +68,12 @@ const Game = (() => {
     `;
   }
 
-  // 전투 중 모든 버튼 비활성화 / 활성화 (Logout 제외)
+  // 전투 중 액션 버튼 비활성화 / 활성화 (Logout, 후퇴 버튼 제외)
   function setActionsDisabled(disabled) {
     document.querySelectorAll('button.btn').forEach(btn => {
-      if (btn.textContent.trim() === 'Logout') return;
+      const text = btn.textContent.trim();
+      if (text === 'Logout') return;
+      if (text === '[ 후퇴 ]') return;
       btn.disabled = disabled;
     });
   }
