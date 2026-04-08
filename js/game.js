@@ -265,6 +265,7 @@ const Game = (() => {
         .single();
       character.zone_id = startZone ? String(startZone.id) : character.zone_id;
       await Character.save(character);
+      log('✨ 체력을 회복하여 다시 일어섰습니다.', 'levelup');
     }
 
     renderStats();

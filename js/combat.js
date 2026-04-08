@@ -46,15 +46,22 @@ const Combat = (() => {
     const panel  = document.getElementById('combat-panel');
     const nameEl = document.getElementById('combat-monster-name');
     const logEl  = document.getElementById('combat-log');
-    if (panel)  panel.style.display = 'block';
+    if (panel) {
+      panel.style.animation = 'fadeIn 0.3s ease';
+      panel.style.display = 'block';
+    }
     if (nameEl) nameEl.textContent = state.monster.name;
     if (logEl)  logEl.innerHTML = '';
     updateMonsterHp();
   }
 
-  function hideCombatPanel() {
+  async function hideCombatPanel() {
     const panel = document.getElementById('combat-panel');
-    if (panel) panel.style.display = 'none';
+    if (!panel) return;
+    panel.style.animation = 'fadeOut 0.3s ease forwards';
+    await new Promise(res => setTimeout(res, 300));
+    panel.style.display = 'none';
+    panel.style.animation = '';
   }
 
   function calcPlayerDmg(char, monsterDef, monsterCon) {
@@ -110,20 +117,22 @@ const Combat = (() => {
       state.monster.hp = Math.max(0, state.monster.hp - preemptDmg);
       combatLog(`[선제 사격] ${state.character.name}의 공격 → ${state.monster.name} -${preemptDmg} HP (${state.monster.hp}/${state.monster.hp_max})`, 'player-attack');
       updateMonsterHp();
+      await delay(800);
       if (state.monster.hp <= 0) { resolve('victory'); return; }
     }
 
     while (state && state.active) {
-      nextRound();
-      if (state && state.active) await delay(1000);
+      await nextRound();
     }
   }
 
-  function nextRound() {
+  async function nextRound() {
     if (!state || !state.active) return;
     state.round++;
     skipDelay = null;
     combatLog(`── 라운드 ${state.round} ──`, 'system');
+    await delay(400);
+    if (!state || !state.active) return;
 
     // Player auto-attack
     const playerDmg = calcPlayerDmg(state.character, state.monster.def, state.monster.stat_con);
@@ -132,6 +141,8 @@ const Combat = (() => {
     updateMonsterHp();
 
     if (monster().hp <= 0) { resolve('victory'); return; }
+    await delay(800);
+    if (!state || !state.active) return;
 
     // Monster auto-attack
     const monsterDmg = calcMonsterDmg(state.monster, state.character);
@@ -144,6 +155,7 @@ const Combat = (() => {
     onStatsUpdate(state.character);
 
     if (state.character.hp <= 0) { resolve('defeat'); return; }
+    await delay(800);
   }
 
   function manualAttack() {
@@ -172,23 +184,28 @@ const Combat = (() => {
     resolve('retreat');
   }
 
-  function resolve(outcome) {
+  async function resolve(outcome) {
     if (!state) return;
     state.active = false;
     skipDelay = null;
 
+    const char = state.character;
+    const mob  = state.monster;
+    state = null;
+
     if (outcome === 'victory') {
-      combatLog(`승리! ${state.monster.expReward} EXP 획득.`, 'item');
-      if (state.monster.loot) {
-        state.monster.loot.forEach(item => combatLog(`아이템 획득: ${item.name}`, 'item'));
-      }
+      combatLog(`승리! ${mob.expReward} EXP 획득.`, 'item');
+      log(`⚔ ${mob.name}을 처치했습니다. ${mob.expReward} EXP 획득.`, 'item');
     } else if (outcome === 'defeat') {
-      combatLog('쓰러졌습니다. 체력을 회복하십시오.', 'system');
+      combatLog('쓰러졌습니다.', 'system');
+      log('💀 쓰러졌습니다. 아르단 평야로 귀환합니다.', 'monster-attack');
+    } else if (outcome === 'retreat') {
+      log('🏃 전투에서 후퇴했습니다.', 'system');
     }
 
-    hideCombatPanel();
-    Game.onCombatEnd(state.character, outcome, state.monster);
-    state = null;
+    await new Promise(res => setTimeout(res, 1500));
+    await hideCombatPanel();
+    Game.onCombatEnd(char, outcome, mob);
   }
 
   // 스킬 버튼 동적 렌더링 (스킬 시스템 구현 후 연결 예정)
