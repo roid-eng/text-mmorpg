@@ -312,8 +312,10 @@ const Combat = (() => {
     const mob  = state.monster;
     const eff  = skill.effect_type;
 
+    const skillDodge = Math.min(0.3, (mob.stat_dex || 0) * 0.005);
+
     if (eff === 'damage') {
-      if (Math.random() < 0.1) {
+      if (Math.random() < skillDodge) {
         combatLog(`[${skill.name}] ${mob.name}이(가) 공격을 회피했다!`, 'dodge');
       } else {
         const dmg = calcPlayerDmg(char, mob.def, mob.stat_con, skill.damage_multiplier || 1);
@@ -327,7 +329,7 @@ const Combat = (() => {
       // 연사: 3회 공격
       for (let i = 0; i < 3; i++) {
         if (!state || !state.active) return;
-        if (Math.random() < 0.1) {
+        if (Math.random() < skillDodge) {
           combatLog(`[${skill.name}] ${mob.name}이(가) ${i + 1}번째 공격을 회피했다!`, 'dodge');
           if (i < 2) await delay(350);
           continue;
@@ -342,7 +344,7 @@ const Combat = (() => {
 
     } else if (eff === 'dot') {
       // 블리자드: 현재 라운드 + 다음 라운드 DoT
-      if (Math.random() < 0.1) {
+      if (Math.random() < skillDodge) {
         combatLog(`[${skill.name}] ${mob.name}이(가) 공격을 회피했다!`, 'dodge');
       } else {
         const dmg = calcPlayerDmg(char, mob.def, mob.stat_con, skill.damage_multiplier || 1);
