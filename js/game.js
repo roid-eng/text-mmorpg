@@ -233,7 +233,7 @@ const Game = (() => {
       .order('unlock_level', { ascending: true });
 
     setActionsDisabled(true);
-    Combat.start(character, mapMonster(monster), skills || []);
+    Combat.start(character, mapMonster(monster), skills || [], equippedBonuses);
   }
 
   async function onCombatEnd(updatedChar, outcome, monster) {

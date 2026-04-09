@@ -72,7 +72,7 @@ const Combat = (() => {
   // --- Damage calculation ---
 
   function calcPlayerDmg(char, monsterDef, monsterCon, multiplier = 1) {
-    const atk = char.atk || 0;
+    const atk = (char.atk || 0) + (state.bonuses.atk || 0);
     const cls = char.class;
     let base;
 
@@ -101,7 +101,8 @@ const Combat = (() => {
   function calcMonsterDmg(monster, char) {
     const dodge = Math.min(0.3, (char.stat_dex || 0) * 0.005);
     if (Math.random() < dodge) return null; // 회피
-    return Math.max(1, Math.floor(monster.atk * (0.85 + Math.random() * 0.3)));
+    const playerDef = state.bonuses.def || 0;
+    return Math.max(1, Math.floor(monster.atk * (0.85 + Math.random() * 0.3)) - playerDef);
   }
 
   function delay(ms) {
@@ -188,13 +189,14 @@ const Combat = (() => {
 
   // --- Combat entry ---
 
-  async function start(character, monster, skills = []) {
+  async function start(character, monster, skills = [], bonuses = { atk: 0, def: 0 }) {
     state = {
       character:  { ...character },
       monster:    { ...monster },
       round:      0,
       active:     true,
       skills,
+      bonuses,
       cooldowns:  {},
       buffs:      [],
       pendingDot: null,
