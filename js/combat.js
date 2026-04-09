@@ -1,13 +1,18 @@
 /**
- * combat.js — Turn-based combat with skill system
+ * combat.js — Auto combat with optional skill intervention
  *
  * Flow per round:
- *   1. Player chooses action (attack button or skill button)
- *   2. Player action resolves
- *   3. Monster HP check → 0: victory (no counter)
- *   4. Monster counter-attack
- *   5. Player HP check → 0: defeat
- *   6. Next round begins
+ *   1. Round starts → skill buttons activated (cooldown/MP check)
+ *   2. 1.5s wait for skill selection (pendingSkill)
+ *   3. If skill selected → skill attack; else → basic attack (auto)
+ *   4. Monster HP check → 0: victory (no counter)
+ *   5. 1s delay → monster counter-attack
+ *   6. Player HP check → 0: defeat
+ *   7. Next round begins automatically
+ *
+ * Log policy:
+ *   - During combat: combatLog only (#combat-log)
+ *   - After combat: log only (#game-log) for result summary
  */
 
 const Combat = (() => {
@@ -18,8 +23,10 @@ const Combat = (() => {
   function setLogHandler(fn)   { onLog = fn; }
   function setStatsHandler(fn) { onStatsUpdate = fn; }
 
+  // Main log (game-log) — combat result only
   function log(text, type = 'system') { onLog(text, type); }
 
+  // Combat panel log (#combat-log)
   function combatLog(text, type = 'system') {
     const el = document.getElementById('combat-log');
     if (!el) return;
@@ -128,14 +135,12 @@ const Combat = (() => {
     if (!wrap) return;
     wrap.innerHTML = '';
 
-    // Basic attack button
-    const atkBtn = document.createElement('button');
-    atkBtn.className = 'btn';
-    atkBtn.textContent = '[ 공격 ]';
-    atkBtn.onclick = () => doBasicAttack();
-    wrap.appendChild(atkBtn);
+    const availableSkills = (state.skills || []).filter(skill => {
+      const cd = state.cooldowns[skill.id] || 0;
+      return cd === 0 && state.character.mp >= skill.mp_cost;
+    });
 
-    // Skill buttons
+    // Render all skill buttons (disabled ones included)
     (state.skills || []).forEach(skill => {
       const btn = document.createElement('button');
       btn.className = 'btn';
@@ -152,10 +157,27 @@ const Combat = (() => {
         btn.style.opacity = '0.4';
       } else {
         btn.textContent = `[ ${skill.name} (MP:${skill.mp_cost}) ]`;
-        btn.onclick = () => doSkillAction(skill);
+        btn.dataset.skillId = skill.id;
+        btn.onclick = () => {
+          state.pendingSkill = skill;
+          // Visual: highlight selected button
+          wrap.querySelectorAll('button').forEach(b => b.style.outline = '');
+          btn.style.outline = '2px solid #e8a020';
+          const hintEl = document.getElementById('skill-select-hint');
+          if (hintEl) hintEl.textContent = `[${skill.name}] 선택됨`;
+        };
       }
       wrap.appendChild(btn);
     });
+
+    // Show selection hint if any skill is usable
+    if (availableSkills.length > 0) {
+      const hint = document.createElement('span');
+      hint.id = 'skill-select-hint';
+      hint.style.cssText = 'font-size:0.75rem; color:#888; align-self:center; margin-left:4px;';
+      hint.textContent = '(1.5초 내 선택)';
+      wrap.appendChild(hint);
+    }
   }
 
   function setSkillButtonsEnabled(enabled) {
@@ -176,6 +198,7 @@ const Combat = (() => {
       cooldowns:  {},
       buffs:      [],
       pendingDot: null,
+      pendingSkill: null,
     };
 
     showCombatPanel();
@@ -197,9 +220,10 @@ const Combat = (() => {
 
   // --- Round lifecycle ---
 
-  function beginRound() {
+  async function beginRound() {
     if (!state || !state.active) return;
     state.round++;
+    state.pendingSkill = null;
     combatLog(`── 라운드 ${state.round} ──`, 'system');
 
     // Apply blizzard DoT from previous round
@@ -223,31 +247,54 @@ const Combat = (() => {
       .filter(b => b.rounds > 0);
 
     renderBuffStatus();
-    renderSkillButtons();
-    // Buttons are now active — waiting for player input
+
+    // Check if any skill is usable this round
+    const hasAvailableSkill = (state.skills || []).some(skill => {
+      const cd = state.cooldowns[skill.id] || 0;
+      return cd === 0 && state.character.mp >= skill.mp_cost;
+    });
+
+    if (hasAvailableSkill) {
+      renderSkillButtons();
+      // Wait for skill selection window
+      await delay(1500);
+    }
+
+    if (!state || !state.active) return;
+
+    // Lock buttons before executing action
+    setSkillButtonsEnabled(false);
+
+    if (state.pendingSkill) {
+      const skill = state.pendingSkill;
+      state.pendingSkill = null;
+      await doSkillAction(skill);
+    } else {
+      await doBasicAttack();
+    }
   }
 
   // --- Player actions ---
 
   async function doBasicAttack() {
     if (!state || !state.active) return;
-    setSkillButtonsEnabled(false);
 
     const dmg = calcPlayerDmg(state.character, state.monster.def, state.monster.stat_con);
     state.monster.hp = Math.max(0, state.monster.hp - dmg);
     combatLog(`${state.character.name}의 공격 → ${state.monster.name} -${dmg} HP (${state.monster.hp}/${state.monster.hp_max})`, 'player-attack');
-    log(`${state.character.name}의 공격 → ${state.monster.name} -${dmg} HP`, 'player-attack');
     updateMonsterHp();
 
     if (state.monster.hp <= 0) { resolveOutcome('victory'); return; }
-    await delay(600);
+    await delay(1000);
     await monsterTurn();
   }
 
   async function doSkillAction(skill) {
     if (!state || !state.active) return;
-    if (state.character.mp < skill.mp_cost) return;
-    setSkillButtonsEnabled(false);
+    if (state.character.mp < skill.mp_cost) {
+      await doBasicAttack();
+      return;
+    }
 
     state.character.mp = Math.max(0, state.character.mp - skill.mp_cost);
     state.cooldowns[skill.id] = skill.cooldown || 0;
@@ -256,7 +303,7 @@ const Combat = (() => {
     await applySkillEffect(skill);
     if (!state || !state.active) return;
 
-    await delay(600);
+    await delay(1000);
     await monsterTurn();
   }
 
@@ -269,7 +316,6 @@ const Combat = (() => {
       const dmg = calcPlayerDmg(char, mob.def, mob.stat_con, skill.damage_multiplier || 1);
       mob.hp = Math.max(0, mob.hp - dmg);
       combatLog(`[${skill.name}] ${char.name}의 공격 → ${mob.name} -${dmg} HP (${mob.hp}/${mob.hp_max})`, 'player-attack');
-      log(`[${skill.name}] ${char.name}의 공격 → ${mob.name} -${dmg} HP`, 'player-attack');
       updateMonsterHp();
       if (mob.hp <= 0) { resolveOutcome('victory'); }
 
@@ -290,7 +336,6 @@ const Combat = (() => {
       const dmg = calcPlayerDmg(char, mob.def, mob.stat_con, skill.damage_multiplier || 1);
       mob.hp = Math.max(0, mob.hp - dmg);
       combatLog(`[${skill.name}] ${char.name}의 공격 → ${mob.name} -${dmg} HP (${mob.hp}/${mob.hp_max})`, 'player-attack');
-      log(`[${skill.name}] ${char.name}의 공격 → ${mob.name} -${dmg} HP`, 'player-attack');
       state.pendingDot = { dmg: Math.floor(dmg * 0.5) };
       updateMonsterHp();
       if (mob.hp <= 0) { resolveOutcome('victory'); return; }
@@ -299,14 +344,12 @@ const Combat = (() => {
       // 방어 태세: 이번 라운드 받는 피해 50% 감소
       state.buffs.push({ id: 'defend', name: '방어 태세', type: 'defend', value: 0.5, rounds: 1 });
       combatLog(`[방어 태세] 피해가 감소합니다.`, 'system');
-      log(`[방어 태세] 피해가 감소합니다.`, 'system');
       renderBuffStatus();
 
     } else if (eff === 'mana_shield') {
       // 마나 실드: 이번 라운드 피해를 MP로 흡수
       state.buffs.push({ id: 'mana_shield', name: '마나 실드', type: 'mana_shield', rounds: 1 });
       combatLog(`[마나 실드] 이번 피해를 MP로 흡수합니다.`, 'system');
-      log(`[마나 실드] 이번 피해를 MP로 흡수합니다.`, 'system');
       renderBuffStatus();
 
     } else if (eff === 'heal') {
@@ -314,18 +357,15 @@ const Combat = (() => {
       const healed = Math.floor(char.hp_max * 0.3);
       char.hp = Math.min(char.hp_max, char.hp + healed);
       combatLog(`[치유] HP가 회복됩니다. (+${healed} HP)`, 'item');
-      log(`[치유] HP가 회복됩니다. (+${healed} HP)`, 'item');
       onStatsUpdate(char);
 
     } else if (eff === 'buff') {
       // 분노 / 신의 가호: buff_duration 라운드 ATK 버프
       const duration = skill.buff_duration || 3;
       const value    = skill.buff_value    || 1.5;
-      // Remove existing same buff before adding
       state.buffs = state.buffs.filter(b => b.id !== skill.id);
       state.buffs.push({ id: skill.id, name: skill.name, type: 'atk_mult', value, rounds: duration });
       combatLog(`[${skill.name}] 버프가 발동됩니다. (${duration}라운드)`, 'item');
-      log(`[${skill.name}] 버프가 발동됩니다.`, 'item');
       renderBuffStatus();
     }
   }
@@ -404,6 +444,7 @@ const Combat = (() => {
     const buffEl = document.getElementById('combat-buff-status');
     if (buffEl) buffEl.textContent = '';
 
+    // Combat result → main log only
     if (outcome === 'victory') {
       combatLog(`승리! ${mob.expReward} EXP 획득.`, 'item');
       log(`⚔ ${mob.name}을 처치했습니다. ${mob.expReward} EXP 획득.`, 'item');
