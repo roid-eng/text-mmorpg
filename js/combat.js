@@ -300,7 +300,17 @@ const Combat = (() => {
     state.cooldowns[skill.id] = skill.cooldown || 0;
     onStatsUpdate(state.character);
 
-    await applySkillEffect(skill);
+    const result = await applySkillEffect(skill);
+
+    // Log damage result here; status effects (defend/heal/buff) log inside applySkillEffect
+    if (result) {
+      if (result.dodged) {
+        combatLog(`[${skill.name}] ${result.mobName}이(가) 공격을 회피했다!`, 'dodge');
+      } else {
+        combatLog(`[${skill.name}] ${result.charName}의 공격 → ${result.mobName} -${result.dmg} HP (${result.mobHp}/${result.mobHpMax})`, 'player-attack');
+      }
+    }
+
     if (!state || !state.active) return;
 
     await delay(1000);
@@ -316,13 +326,14 @@ const Combat = (() => {
 
     if (eff === 'damage') {
       if (Math.random() < skillDodge) {
-        combatLog(`[${skill.name}] ${mob.name}이(가) 공격을 회피했다!`, 'dodge');
+        return { dodged: true, mobName: mob.name };
       } else {
         const dmg = calcPlayerDmg(char, mob.def, mob.stat_con, skill.damage_multiplier || 1);
         mob.hp = Math.max(0, mob.hp - dmg);
-        combatLog(`[${skill.name}] ${char.name}의 공격 → ${mob.name} -${dmg} HP (${mob.hp}/${mob.hp_max})`, 'player-attack');
         updateMonsterHp();
+        const result = { dodged: false, charName: char.name, mobName: mob.name, dmg, mobHp: mob.hp, mobHpMax: mob.hp_max };
         if (mob.hp <= 0) { resolveOutcome('victory'); }
+        return result;
       }
 
     } else if (eff === 'multi_hit') {
@@ -345,14 +356,15 @@ const Combat = (() => {
     } else if (eff === 'dot') {
       // 블리자드: 현재 라운드 + 다음 라운드 DoT
       if (Math.random() < skillDodge) {
-        combatLog(`[${skill.name}] ${mob.name}이(가) 공격을 회피했다!`, 'dodge');
+        return { dodged: true, mobName: mob.name };
       } else {
         const dmg = calcPlayerDmg(char, mob.def, mob.stat_con, skill.damage_multiplier || 1);
         mob.hp = Math.max(0, mob.hp - dmg);
-        combatLog(`[${skill.name}] ${char.name}의 공격 → ${mob.name} -${dmg} HP (${mob.hp}/${mob.hp_max})`, 'player-attack');
         state.pendingDot = { dmg: Math.floor(dmg * 0.5) };
         updateMonsterHp();
-        if (mob.hp <= 0) { resolveOutcome('victory'); return; }
+        const result = { dodged: false, charName: char.name, mobName: mob.name, dmg, mobHp: mob.hp, mobHpMax: mob.hp_max };
+        if (mob.hp <= 0) { resolveOutcome('victory'); return result; }
+        return result;
       }
 
     } else if (eff === 'defend') {
