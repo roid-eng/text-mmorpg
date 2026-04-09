@@ -313,16 +313,25 @@ const Combat = (() => {
     const eff  = skill.effect_type;
 
     if (eff === 'damage') {
-      const dmg = calcPlayerDmg(char, mob.def, mob.stat_con, skill.damage_multiplier || 1);
-      mob.hp = Math.max(0, mob.hp - dmg);
-      combatLog(`[${skill.name}] ${char.name}의 공격 → ${mob.name} -${dmg} HP (${mob.hp}/${mob.hp_max})`, 'player-attack');
-      updateMonsterHp();
-      if (mob.hp <= 0) { resolveOutcome('victory'); }
+      if (Math.random() < 0.1) {
+        combatLog(`[${skill.name}] ${mob.name}이(가) 공격을 회피했다!`, 'dodge');
+      } else {
+        const dmg = calcPlayerDmg(char, mob.def, mob.stat_con, skill.damage_multiplier || 1);
+        mob.hp = Math.max(0, mob.hp - dmg);
+        combatLog(`[${skill.name}] ${char.name}의 공격 → ${mob.name} -${dmg} HP (${mob.hp}/${mob.hp_max})`, 'player-attack');
+        updateMonsterHp();
+        if (mob.hp <= 0) { resolveOutcome('victory'); }
+      }
 
     } else if (eff === 'multi_hit') {
       // 연사: 3회 공격
       for (let i = 0; i < 3; i++) {
         if (!state || !state.active) return;
+        if (Math.random() < 0.1) {
+          combatLog(`[${skill.name}] ${mob.name}이(가) ${i + 1}번째 공격을 회피했다!`, 'dodge');
+          if (i < 2) await delay(350);
+          continue;
+        }
         const dmg = calcPlayerDmg(char, mob.def, mob.stat_con, skill.damage_multiplier || 0.5);
         mob.hp = Math.max(0, mob.hp - dmg);
         combatLog(`[${skill.name}] ${i + 1}번째 공격 → ${mob.name} -${dmg} HP (${mob.hp}/${mob.hp_max})`, 'player-attack');
@@ -333,12 +342,16 @@ const Combat = (() => {
 
     } else if (eff === 'dot') {
       // 블리자드: 현재 라운드 + 다음 라운드 DoT
-      const dmg = calcPlayerDmg(char, mob.def, mob.stat_con, skill.damage_multiplier || 1);
-      mob.hp = Math.max(0, mob.hp - dmg);
-      combatLog(`[${skill.name}] ${char.name}의 공격 → ${mob.name} -${dmg} HP (${mob.hp}/${mob.hp_max})`, 'player-attack');
-      state.pendingDot = { dmg: Math.floor(dmg * 0.5) };
-      updateMonsterHp();
-      if (mob.hp <= 0) { resolveOutcome('victory'); return; }
+      if (Math.random() < 0.1) {
+        combatLog(`[${skill.name}] ${mob.name}이(가) 공격을 회피했다!`, 'dodge');
+      } else {
+        const dmg = calcPlayerDmg(char, mob.def, mob.stat_con, skill.damage_multiplier || 1);
+        mob.hp = Math.max(0, mob.hp - dmg);
+        combatLog(`[${skill.name}] ${char.name}의 공격 → ${mob.name} -${dmg} HP (${mob.hp}/${mob.hp_max})`, 'player-attack');
+        state.pendingDot = { dmg: Math.floor(dmg * 0.5) };
+        updateMonsterHp();
+        if (mob.hp <= 0) { resolveOutcome('victory'); return; }
+      }
 
     } else if (eff === 'defend') {
       // 방어 태세: 이번 라운드 받는 피해 50% 감소
@@ -356,7 +369,7 @@ const Combat = (() => {
       // 치유: hp_max * 0.3 회복
       const healed = Math.floor(char.hp_max * 0.3);
       char.hp = Math.min(char.hp_max, char.hp + healed);
-      combatLog(`[치유] HP가 회복됩니다. (+${healed} HP)`, 'item');
+      combatLog(`[${skill.name}] HP +${healed} 회복됐습니다.`, 'dodge');
       onStatsUpdate(char);
 
     } else if (eff === 'buff') {
