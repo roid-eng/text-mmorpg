@@ -7,6 +7,7 @@ const Game = (() => {
   let logEl = null;
   let currentZoneName = null;
   let equippedBonuses = { atk: 0, def: 0 };
+  let restInterval = null;
 
   function log(text, type = '') {
     if (!logEl) return;
@@ -401,6 +402,65 @@ const Game = (() => {
     await showInventory();
   }
 
+  // --- REST ---
+
+  function rest() {
+    if (restInterval) {
+      _stopRest(false);
+      return;
+    }
+
+    const restBtn = document.getElementById('btn-rest');
+    setActionsDisabled(true);
+    if (restBtn) {
+      restBtn.disabled = false;
+      restBtn.textContent = '[ 휴식 중단 ]';
+    }
+
+    log('휴식을 시작합니다.', 'system');
+
+    const hpPerSec = Math.max(1, Math.floor((character.stat_con || 1) * 0.5));
+    const mpPerSec = Math.max(1, Math.floor((character.stat_wiz || 1) * 0.3));
+
+    restInterval = setInterval(() => {
+      const hpFull = character.hp >= character.hp_max;
+      const mpFull = character.mp >= character.mp_max;
+
+      if (!hpFull) character.hp = Math.min(character.hp_max, character.hp + hpPerSec);
+      if (!mpFull) character.mp = Math.min(character.mp_max, character.mp + mpPerSec);
+
+      renderStats();
+
+      if (character.hp >= character.hp_max && character.mp >= character.mp_max) {
+        _stopRest(true);
+      }
+    }, 1000);
+  }
+
+  async function _stopRest(completed) {
+    if (restInterval) {
+      clearInterval(restInterval);
+      restInterval = null;
+    }
+
+    await supabaseClient
+      .from('text_mmorpg_characters')
+      .update({ hp: character.hp, mp: character.mp })
+      .eq('id', character.id);
+
+    const restBtn = document.getElementById('btn-rest');
+    if (restBtn) {
+      restBtn.textContent = '[ Rest ]';
+    }
+    setActionsDisabled(false);
+
+    if (completed) {
+      log('휴식이 완료됐습니다.', 'system');
+    } else {
+      log('휴식을 중단합니다.', 'system');
+    }
+  }
+
   async function showRanking() {
     const panel = document.getElementById('ranking-panel');
     if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
@@ -432,5 +492,5 @@ const Game = (() => {
     });
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, showRanking };
+  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, showRanking, rest };
 })();

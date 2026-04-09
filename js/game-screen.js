@@ -15,8 +15,7 @@ function actionExplore() {
 }
 
 function actionRest() {
-  Game.log('잠시 휴식을 취합니다. HP/MP가 일부 회복됩니다.', 'system');
-  // TODO: partial HP/MP restore + save
+  Game.rest();
 }
 
 function actionInventory() {
