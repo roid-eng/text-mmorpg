@@ -474,9 +474,12 @@ const Combat = (() => {
     if (buffEl) buffEl.textContent = '';
 
     // Combat result → main log only
+    let goldEarned = 0;
     if (outcome === 'victory') {
-      combatLog(`승리! ${mob.expReward} EXP 획득.`, 'item');
-      log(`⚔ ${mob.name}을 처치했습니다. ${mob.expReward} EXP 획득.`, 'item');
+      const baseGold = mob.goldReward || 0;
+      goldEarned = Math.floor(baseGold * (0.7 + Math.random() * 0.6));
+      combatLog(`승리! ${mob.expReward} EXP, ${goldEarned} Gold 획득.`, 'item');
+      log(`⚔ ${mob.name}을 처치했습니다. ${mob.expReward} EXP, ${goldEarned} Gold 획득.`, 'item');
     } else if (outcome === 'defeat') {
       combatLog('쓰러졌습니다.', 'system');
       log('💀 쓰러졌습니다. 아르단 평야로 귀환합니다.', 'monster-attack');
@@ -486,7 +489,7 @@ const Combat = (() => {
 
     await new Promise(res => setTimeout(res, 1500));
     await hideCombatPanel();
-    Game.onCombatEnd(char, outcome, mob);
+    Game.onCombatEnd(char, outcome, mob, goldEarned);
   }
 
   function getState() { return state; }

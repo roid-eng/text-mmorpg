@@ -63,6 +63,7 @@ const Game = (() => {
       &nbsp;|&nbsp; HP ${character.hp}/${character.hp_max}
       &nbsp;|&nbsp; MP ${character.mp}/${character.mp_max}
       ${currentZoneName ? `&nbsp;|&nbsp; 지역: ${currentZoneName}` : ''}
+      &nbsp;|&nbsp; Gold: ${character.gold || 0}
       ${(equippedBonuses.atk > 0 || equippedBonuses.def > 0)
         ? `&nbsp;|&nbsp; <span class="amber">ATK+${equippedBonuses.atk} DEF+${equippedBonuses.def}</span>`
         : ''}
@@ -219,6 +220,7 @@ const Game = (() => {
       def:         m.def,
       stat_con:    m.stat_con || 0,
       expReward:   m.exp,
+      goldReward:  m.gold_reward || 0,
       loot:        null,
     };
   }
@@ -236,11 +238,12 @@ const Game = (() => {
     Combat.start(character, mapMonster(monster), skills || [], equippedBonuses);
   }
 
-  async function onCombatEnd(updatedChar, outcome, monster) {
+  async function onCombatEnd(updatedChar, outcome, monster, goldEarned = 0) {
     character = { ...character, ...updatedChar };
 
     if (outcome === 'victory') {
       character.exp += monster.expReward;
+      character.gold = (character.gold || 0) + goldEarned;
       const expNeeded = character.level * 100;
       if (character.exp >= expNeeded) {
         character = Character.levelUpStats(character);
