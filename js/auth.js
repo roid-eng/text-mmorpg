@@ -12,11 +12,6 @@ const Auth = (() => {
     const { data, error } = await supabaseClient.auth.signUp({ email, password });
     if (error) throw error;
 
-    const { error: profileError } = await supabaseClient
-      .from('text_mmorpg_players')
-      .upsert({ id: data.user.id, username, language }, { onConflict: 'id', ignoreDuplicates: true });
-    if (profileError) throw profileError;
-
     return data;
   }
 
