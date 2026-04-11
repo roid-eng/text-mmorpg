@@ -105,12 +105,10 @@ const Game = (() => {
       log(`레벨 권장: ${zone.level_min}~${zone.level_max}`, 'system');
     }
 
-    const panel    = document.getElementById('zone-actions');
-    const btnWrap  = document.getElementById('zone-move-buttons');
-    const monPanel = document.getElementById('zone-monster-panel');
+    const panel   = document.getElementById('zone-actions');
+    const btnWrap = document.getElementById('zone-move-buttons');
 
     btnWrap.innerHTML = '';
-    if (monPanel) { monPanel.innerHTML = ''; monPanel.style.display = 'none'; }
 
     if (!connections || connections.length === 0) {
       const empty = document.createElement('span');
@@ -189,17 +187,12 @@ const Game = (() => {
       }
     }
 
-    // 비선공 몬스터 — 카드 형태로 표시
+    // 비선공 몬스터 — 모달로 표시
     const passive = monsters.filter(m => !m.is_aggressive);
     if (passive.length === 0) return;
 
-    const monPanel = document.getElementById('zone-monster-panel');
-    monPanel.innerHTML = '';
-
-    const titleEl = document.createElement('div');
-    titleEl.className = 'panel-title';
-    titleEl.textContent = '[ 주변 몬스터 ]';
-    monPanel.appendChild(titleEl);
+    const list = document.getElementById('monster-modal-list');
+    list.innerHTML = '';
 
     passive.forEach(m => {
       const card = document.createElement('div');
@@ -214,10 +207,16 @@ const Game = (() => {
         </div>
       `;
       card.querySelector('button').onclick = () => startCombat(m);
-      monPanel.appendChild(card);
+      list.appendChild(card);
     });
 
-    monPanel.style.display = 'block';
+    const overlay = document.getElementById('monster-modal-overlay');
+    overlay.style.display = 'flex';
+  }
+
+  function closeMonsterModal() {
+    const overlay = document.getElementById('monster-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
   }
 
   function mapMonster(m) {
@@ -236,8 +235,7 @@ const Game = (() => {
   }
 
   async function startCombat(monster) {
-    const monPanel = document.getElementById('zone-monster-panel');
-    if (monPanel) { monPanel.innerHTML = ''; monPanel.style.display = 'none'; }
+    closeMonsterModal();
 
     // 현재 직업 + 레벨 이하 스킬 로드
     const { data: skills } = await supabaseClient
@@ -508,5 +506,5 @@ const Game = (() => {
     });
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, showRanking, rest };
+  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, showRanking, rest, closeMonsterModal };
 })();
