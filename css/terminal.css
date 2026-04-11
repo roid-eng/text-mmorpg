@@ -131,13 +131,19 @@
 }
 
 /* ------------------------------------------------------------
-   Monster card
+   Monster card / Shop item card
    ------------------------------------------------------------ */
 .monster-card {
   background: #0d0f12;
   border: 1px solid var(--border);
   padding: 10px 14px;
   margin-bottom: 6px;
+}
+
+/* Shop tab active state */
+.shop-tab-active {
+  background: var(--amber);
+  color: var(--bg);
 }
 
 /* ------------------------------------------------------------

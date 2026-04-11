@@ -27,6 +27,10 @@ function actionChat() {
   panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 }
 
+function actionShop() {
+  Game.openShopModal();
+}
+
 function actionRanking() {
   Game.showRanking();
 }

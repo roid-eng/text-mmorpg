@@ -506,5 +506,182 @@ const Game = (() => {
     });
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, showRanking, rest, closeMonsterModal };
+  // --- SHOP ---
+
+  function openShopModal() {
+    const overlay = document.getElementById('shop-modal-overlay');
+    if (overlay) overlay.style.display = 'flex';
+    shopTab('buy');
+  }
+
+  function closeShopModal() {
+    const overlay = document.getElementById('shop-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  function shopTab(tab) {
+    const buyList = document.getElementById('shop-buy-list');
+    const sellList = document.getElementById('shop-sell-list');
+    const buyBtn  = document.getElementById('shop-tab-buy');
+    const sellBtn = document.getElementById('shop-tab-sell');
+
+    if (tab === 'buy') {
+      buyList.style.display  = 'flex';
+      sellList.style.display = 'none';
+      buyBtn.classList.add('shop-tab-active');
+      sellBtn.classList.remove('shop-tab-active');
+      loadShopItems();
+    } else {
+      buyList.style.display  = 'none';
+      sellList.style.display = 'flex';
+      buyBtn.classList.remove('shop-tab-active');
+      sellBtn.classList.add('shop-tab-active');
+      loadSellItems();
+    }
+  }
+
+  async function loadShopItems() {
+    const list = document.getElementById('shop-buy-list');
+    list.innerHTML = '<span class="muted">불러오는 중...</span>';
+
+    const { data: items, error } = await supabaseClient
+      .from('text_mmorpg_items')
+      .select('*')
+      .eq('is_shop_item', true)
+      .lte('level_req', character.level)
+      .order('level_req', { ascending: true });
+
+    if (error || !items || items.length === 0) {
+      list.innerHTML = '<span class="muted">판매 중인 아이템이 없습니다.</span>';
+      return;
+    }
+
+    list.innerHTML = '';
+    items.forEach(item => {
+      const canAfford = character.gold >= item.price;
+      const card = document.createElement('div');
+      card.className = 'monster-card';
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+          <div>
+            <div class="amber" style="margin-bottom:2px;">${item.name}</div>
+            <div class="muted" style="font-size:0.8rem; margin-bottom:4px;">${item.description || ''}</div>
+            <div style="font-size:0.85rem;">${item.price} Gold</div>
+          </div>
+          <button class="btn" style="white-space:nowrap; flex-shrink:0;${canAfford ? '' : ' opacity:0.4;'}"
+            ${canAfford ? '' : 'disabled'}>[ 구매 ]</button>
+        </div>
+      `;
+      if (canAfford) card.querySelector('button').onclick = () => buyItem(item.id);
+      list.appendChild(card);
+    });
+  }
+
+  async function buyItem(itemId) {
+    const { data: item } = await supabaseClient
+      .from('text_mmorpg_items')
+      .select('*')
+      .eq('id', itemId)
+      .single();
+
+    if (!item) return;
+    if (character.gold < item.price) { log('골드가 부족합니다.', 'system'); return; }
+
+    character.gold -= item.price;
+    await supabaseClient.from('text_mmorpg_inventory').insert({
+      character_id: character.id,
+      item_id:      String(item.id),
+      item_name:    item.name,
+      item_type:    item.type,
+      equipped:     false,
+    });
+    await Character.save(character);
+    renderStats();
+    log(`${item.name} 구매. -${item.price} Gold`, 'item');
+    loadShopItems();
+  }
+
+  async function loadSellItems() {
+    const list = document.getElementById('shop-sell-list');
+    list.innerHTML = '<span class="muted">불러오는 중...</span>';
+
+    const { data: rows, error } = await supabaseClient
+      .from('text_mmorpg_inventory')
+      .select('*')
+      .eq('character_id', character.id);
+
+    if (error || !rows || rows.length === 0) {
+      list.innerHTML = '<span class="muted">매입 가능한 아이템이 없습니다.</span>';
+      return;
+    }
+
+    const itemIds = [...new Set(rows.map(r => Number(r.item_id)))];
+    const { data: itemDefs } = await supabaseClient
+      .from('text_mmorpg_items')
+      .select('id, price, is_shop_item')
+      .in('id', itemIds);
+
+    const itemMap = {};
+    (itemDefs || []).forEach(i => { itemMap[String(i.id)] = i; });
+
+    const sellable = rows.filter(r => {
+      const def = itemMap[r.item_id];
+      return def && def.is_shop_item && def.price > 0;
+    });
+
+    if (sellable.length === 0) {
+      list.innerHTML = '<span class="muted">매입 가능한 아이템이 없습니다.</span>';
+      return;
+    }
+
+    list.innerHTML = '';
+    sellable.forEach(row => {
+      const def = itemMap[row.item_id];
+      const sellPrice = Math.floor(def.price * 0.5);
+      const card = document.createElement('div');
+      card.className = 'monster-card';
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+          <div>
+            <div class="amber" style="margin-bottom:2px;">${row.item_name}${row.equipped ? ' <span class="muted">[장착 중]</span>' : ''}</div>
+            <div style="font-size:0.85rem;">+${sellPrice} Gold</div>
+          </div>
+          <button class="btn" style="white-space:nowrap; flex-shrink:0;">[ 매입 ]</button>
+        </div>
+      `;
+      card.querySelector('button').onclick = () => sellItem(row.id, row.item_id);
+      list.appendChild(card);
+    });
+  }
+
+  async function sellItem(inventoryId, itemId) {
+    const { data: invRow } = await supabaseClient
+      .from('text_mmorpg_inventory')
+      .select('equipped')
+      .eq('id', inventoryId)
+      .single();
+
+    const { data: item } = await supabaseClient
+      .from('text_mmorpg_items')
+      .select('name, price, atk_bonus, def_bonus')
+      .eq('id', Number(itemId))
+      .single();
+
+    if (!item) return;
+    const sellPrice = Math.floor(item.price * 0.5);
+
+    if (invRow?.equipped) {
+      equippedBonuses.atk = Math.max(0, equippedBonuses.atk - (item.atk_bonus || 0));
+      equippedBonuses.def = Math.max(0, equippedBonuses.def - (item.def_bonus || 0));
+    }
+
+    await supabaseClient.from('text_mmorpg_inventory').delete().eq('id', inventoryId);
+    character.gold = (character.gold || 0) + sellPrice;
+    await Character.save(character);
+    renderStats();
+    log(`${item.name} 매입. +${sellPrice} Gold`, 'item');
+    loadSellItems();
+  }
+
+  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab };
 })();
