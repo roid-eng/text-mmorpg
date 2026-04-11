@@ -105,12 +105,12 @@ const Game = (() => {
       log(`레벨 권장: ${zone.level_min}~${zone.level_max}`, 'system');
     }
 
-    const panel   = document.getElementById('zone-actions');
-    const title   = document.getElementById('zone-actions-title');
-    const btnWrap = document.getElementById('zone-direction-buttons');
+    const panel    = document.getElementById('zone-actions');
+    const btnWrap  = document.getElementById('zone-move-buttons');
+    const monPanel = document.getElementById('zone-monster-panel');
 
-    title.textContent = '이동';
     btnWrap.innerHTML = '';
+    if (monPanel) { monPanel.innerHTML = ''; monPanel.style.display = 'none'; }
 
     if (!connections || connections.length === 0) {
       const empty = document.createElement('span');
@@ -176,26 +176,6 @@ const Game = (() => {
       .eq('zone_id', zoneId);
     if (error || !monsters || monsters.length === 0) return;
 
-    const btnWrap = document.getElementById('zone-direction-buttons');
-
-    // 비선공 몬스터 — 항상 선택 버튼 표시
-    const passive = monsters.filter(m => !m.is_aggressive);
-    if (passive.length > 0) {
-      const sep = document.createElement('div');
-      sep.className = 'panel-title';
-      sep.style.marginTop = '8px';
-      sep.textContent = '전투';
-      btnWrap.appendChild(sep);
-
-      passive.forEach(m => {
-        const btn = document.createElement('button');
-        btn.className = 'btn';
-        btn.textContent = `[ ${m.name}와 싸우기 ]`;
-        btn.onclick = () => startCombat(m);
-        btnWrap.appendChild(btn);
-      });
-    }
-
     // 선공 몬스터 — 30% 확률 조우
     const aggressive = monsters.filter(m => m.is_aggressive);
     if (aggressive.length > 0) {
@@ -208,6 +188,36 @@ const Game = (() => {
         log('주변이 조용하다.', 'system');
       }
     }
+
+    // 비선공 몬스터 — 카드 형태로 표시
+    const passive = monsters.filter(m => !m.is_aggressive);
+    if (passive.length === 0) return;
+
+    const monPanel = document.getElementById('zone-monster-panel');
+    monPanel.innerHTML = '';
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'panel-title';
+    titleEl.textContent = '[ 주변 몬스터 ]';
+    monPanel.appendChild(titleEl);
+
+    passive.forEach(m => {
+      const card = document.createElement('div');
+      card.className = 'monster-card';
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+          <div>
+            <div class="amber" style="margin-bottom:4px;">${m.name}</div>
+            <div class="muted" style="font-size:0.8rem;">${m.description || ''}</div>
+          </div>
+          <button class="btn" style="white-space:nowrap; flex-shrink:0;">[ 싸우기 ]</button>
+        </div>
+      `;
+      card.querySelector('button').onclick = () => startCombat(m);
+      monPanel.appendChild(card);
+    });
+
+    monPanel.style.display = 'block';
   }
 
   function mapMonster(m) {
@@ -226,6 +236,9 @@ const Game = (() => {
   }
 
   async function startCombat(monster) {
+    const monPanel = document.getElementById('zone-monster-panel');
+    if (monPanel) { monPanel.innerHTML = ''; monPanel.style.display = 'none'; }
+
     // 현재 직업 + 레벨 이하 스킬 로드
     const { data: skills } = await supabaseClient
       .from('text_mmorpg_skills')
