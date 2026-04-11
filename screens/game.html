@@ -74,7 +74,7 @@
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
         <button class="btn" onclick="actionExplore()">[ Explore ]</button>
         <button class="btn" id="btn-rest" onclick="actionRest()">[ Rest ]</button>
-        <button class="btn" onclick="actionInventory()">[ Inventory ]</button>
+        <button class="btn" style="grid-column:1/-1;" onclick="actionInventory()">[ Inventory ]</button>
         <button class="btn" id="btn-chat" onclick="actionChat()">[ Chat ]</button>
         <button class="btn" style="grid-column:1/-1;" onclick="actionShop()">[ Shop ]</button>
         <button class="btn" style="grid-column:1/-1;" onclick="actionRanking()">[ Ranking ]</button>
@@ -97,9 +97,9 @@
       <div id="chat-side-log" class="log" style="height:160px; overflow-y:auto; font-size:0.75rem;"></div>
       <div style="display:flex; gap:6px; margin-top:6px;">
         <input id="chat-side-input" type="text" placeholder="Message..."
-          style="flex:1; font-size:0.75rem; padding:6px 8px;"
+          style="flex:1; min-width:0; font-size:0.75rem; padding:6px 8px;"
           onkeydown="if(event.key==='Enter') sendSideChat()">
-        <button class="btn" onclick="sendSideChat()" style="padding:6px 10px; font-size:0.75rem;">SEND</button>
+        <button class="btn" onclick="sendSideChat()" style="padding:6px 10px; font-size:0.75rem; flex-shrink:0;">✓</button>
       </div>
     </div>
 

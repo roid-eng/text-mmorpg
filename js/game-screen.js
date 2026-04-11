@@ -2,10 +2,12 @@
  * game-screen.js — Game screen handlers
  */
 
+let _character = null;
+
 (async () => {
-  const session   = await Auth.getSession();
-  const character = await Character.getActive(session.user.id);
-  await Game.start(character);
+  const session = await Auth.getSession();
+  _character    = await Character.getActive(session.user.id);
+  await Game.start(_character);
   await Game.showZone();
   subscribeChat();
 })();
@@ -42,19 +44,13 @@ function actionRanking() {
 async function sendChat() {
   const input   = document.getElementById('chat-input');
   const message = input.value.trim();
-  if (!message) return;
+  if (!message || !_character) return;
   input.value = '';
 
   const session = await Auth.getSession();
-  const { data: player } = await supabaseClient
-    .from('text_mmorpg_players')
-    .select('username')
-    .eq('id', session.user.id)
-    .single();
-
   await supabaseClient.from('text_mmorpg_chat').insert({
     player_id: session.user.id,
-    username:  player.username,
+    username:  _character.name,
     message,
   });
 }
@@ -62,19 +58,13 @@ async function sendChat() {
 async function sendSideChat() {
   const input   = document.getElementById('chat-side-input');
   const message = input.value.trim();
-  if (!message) return;
+  if (!message || !_character) return;
   input.value = '';
 
   const session = await Auth.getSession();
-  const { data: player } = await supabaseClient
-    .from('text_mmorpg_players')
-    .select('username')
-    .eq('id', session.user.id)
-    .single();
-
   await supabaseClient.from('text_mmorpg_chat').insert({
     player_id: session.user.id,
-    username:  player.username,
+    username:  _character.name,
     message,
   });
 }

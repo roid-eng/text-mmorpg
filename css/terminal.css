@@ -337,6 +337,7 @@
   #stat-panel      { display: none; }
   #right-col       { display: none; }
   #chat-side-panel { display: none; }
+  #chat-panel      { display: none !important; }
   #mobile-header   { display: block !important; }
 }
 
