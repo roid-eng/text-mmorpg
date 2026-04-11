@@ -10,23 +10,6 @@
   <!-- Game log -->
   <div class="log" id="game-log"></div>
 
-  <!-- Combat panel -->
-  <div class="panel" id="combat-panel" style="display:none;">
-    <pre id="combat-monster-ascii" class="monster-ascii"></pre>
-    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
-      <span id="combat-monster-name" class="amber" style="font-size:1rem; letter-spacing:0.1em;"></span>
-      <span id="combat-hp-text" class="muted" style="font-size:0.8rem;"></span>
-    </div>
-    <div class="stat-bar" style="margin-bottom:12px;">
-      <div id="combat-hp-bar-fill" class="stat-bar-fill hp" style="width:100%;"></div>
-    </div>
-    <div class="log" id="combat-log" style="height:200px;"></div>
-    <div id="skill-buttons" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;"></div>
-    <div style="margin-top:8px;">
-      <button class="btn btn-danger" onclick="Combat.retreat()">[ 후퇴 ]</button>
-    </div>
-  </div>
-
   <!-- Zone direction buttons (rendered dynamically by explore) -->
   <div class="panel" id="zone-actions" style="display:none;">
     <div class="panel-title">이동</div>

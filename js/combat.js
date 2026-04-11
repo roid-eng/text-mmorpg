@@ -48,14 +48,11 @@ const Combat = (() => {
   }
 
   function showCombatPanel() {
-    const panel   = document.getElementById('combat-panel');
+    const overlay = document.getElementById('combat-modal-overlay');
     const nameEl  = document.getElementById('combat-monster-name');
     const logEl   = document.getElementById('combat-log');
     const asciiEl = document.getElementById('combat-monster-ascii');
-    if (panel) {
-      panel.style.animation = 'fadeIn 0.3s ease';
-      panel.style.display = 'block';
-    }
+    if (overlay) overlay.style.display = 'flex';
     if (nameEl)  nameEl.textContent  = state.monster.name;
     if (logEl)   logEl.innerHTML     = '';
     if (asciiEl) asciiEl.textContent = window.MONSTER_ASCII?.[state.monster.name] || '';
@@ -63,12 +60,8 @@ const Combat = (() => {
   }
 
   async function hideCombatPanel() {
-    const panel = document.getElementById('combat-panel');
-    if (!panel) return;
-    panel.style.animation = 'fadeOut 0.3s ease forwards';
-    await new Promise(res => setTimeout(res, 300));
-    panel.style.display = 'none';
-    panel.style.animation = '';
+    const overlay = document.getElementById('combat-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
   }
 
   // --- Damage calculation ---

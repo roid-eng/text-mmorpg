@@ -14,6 +14,23 @@
   <div id="app">
     <!-- Screen content injected by app.js -->
   </div>
+  <!-- Combat modal -->
+  <div id="combat-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:100; justify-content:center; align-items:center;">
+    <div id="combat-modal" style="width:90%; max-width:480px; background:var(--bg-panel); border:1px solid var(--amber-dim); padding:20px;">
+      <pre id="combat-monster-ascii" class="monster-ascii"></pre>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span id="combat-monster-name" class="amber"></span>
+        <span id="combat-hp-text" class="muted"></span>
+      </div>
+      <div class="stat-bar" style="margin-bottom:12px;">
+        <div id="combat-hp-bar-fill" class="stat-bar-fill hp" style="width:100%;"></div>
+      </div>
+      <div id="combat-log" class="log" style="height:200px; overflow-y:auto; margin-bottom:12px;"></div>
+      <div id="skill-buttons"></div>
+      <button class="btn btn-danger" onclick="Combat.retreat()" style="margin-top:8px;">[ 후퇴 ]</button>
+    </div>
+  </div>
+
   <!-- Monster selection modal -->
   <div id="monster-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
     <div style="background:var(--bg-panel); border:1px solid var(--amber-dim); padding:20px 24px; width:90%; max-width:480px; max-height:80vh; overflow-y:auto;">

@@ -100,11 +100,11 @@ const Game = (() => {
 
   // 전투 중 액션 버튼 비활성화 / 활성화 (전투 패널 내부, Logout, 후퇴 버튼 제외)
   function setActionsDisabled(disabled) {
-    const combatPanel = document.getElementById('combat-panel');
+    const combatModal = document.getElementById('combat-modal');
     document.querySelectorAll('button.btn').forEach(btn => {
       if (btn.textContent.trim() === 'Logout') return;
       if (btn.textContent.trim() === '[ 후퇴 ]') return;
-      if (combatPanel && combatPanel.contains(btn)) return; // 스킬/공격 버튼은 Combat이 직접 관리
+      if (combatModal && combatModal.contains(btn)) return; // 스킬/공격 버튼은 Combat이 직접 관리
       btn.disabled = disabled;
     });
   }
