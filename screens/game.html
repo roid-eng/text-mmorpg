@@ -18,6 +18,11 @@
     </div>
     <div style="margin-top:12px;" id="stat-gold"></div>
     <div id="stat-atk" class="muted"></div>
+    <div style="margin-top:8px;">
+      <div class="stat-label">EXP</div>
+      <div class="stat-bar"><div id="stat-exp-bar" class="stat-bar-fill" style="background:var(--amber); width:0%;"></div></div>
+      <div id="stat-exp-text" class="muted"></div>
+    </div>
   </div>
 
   <!-- 중앙: 메인 영역 -->
@@ -53,7 +58,7 @@
       <div id="ranking-list" style="display:flex; flex-direction:column; gap:4px;"></div>
     </div>
 
-    <!-- 채팅 패널 -->
+    <!-- 채팅 패널 (모바일용) -->
     <div class="panel" id="chat-panel" style="display:none;">
       <div class="panel-title">Global Chat</div>
       <div class="log" id="chat-log" style="height:160px;"></div>
@@ -70,7 +75,7 @@
         <button class="btn" onclick="actionExplore()">[ Explore ]</button>
         <button class="btn" id="btn-rest" onclick="actionRest()">[ Rest ]</button>
         <button class="btn" onclick="actionInventory()">[ Inventory ]</button>
-        <button class="btn" onclick="actionChat()">[ Chat ]</button>
+        <button class="btn" id="btn-chat" onclick="actionChat()">[ Chat ]</button>
         <button class="btn" style="grid-column:1/-1;" onclick="actionShop()">[ Shop ]</button>
         <button class="btn" style="grid-column:1/-1;" onclick="actionRanking()">[ Ranking ]</button>
       </div>
@@ -78,11 +83,26 @@
 
   </div>
 
-  <!-- 우측: 노드 맵 패널 (PC만) -->
-  <div id="map-panel" class="panel side-panel">
-    <div class="panel-title">MAP</div>
-    <canvas id="node-map" width="180" height="220"></canvas>
-    <div id="map-zone-name" class="amber" style="text-align:center; margin-top:8px; font-size:0.8rem;"></div>
+  <!-- 우측 컬럼 (PC만): 노드 맵 + 사이드 채팅 -->
+  <div id="right-col" class="side-panel">
+
+    <div id="map-panel" class="panel">
+      <div class="panel-title">MAP</div>
+      <canvas id="node-map" width="180" height="220"></canvas>
+      <div id="map-zone-name" class="amber" style="text-align:center; margin-top:8px; font-size:0.8rem;"></div>
+    </div>
+
+    <div id="chat-side-panel" class="panel" style="margin-top:8px;">
+      <div class="panel-title">GLOBAL CHAT</div>
+      <div id="chat-side-log" class="log" style="height:160px; overflow-y:auto; font-size:0.75rem;"></div>
+      <div style="display:flex; gap:6px; margin-top:6px;">
+        <input id="chat-side-input" type="text" placeholder="Message..."
+          style="flex:1; font-size:0.75rem; padding:6px 8px;"
+          onkeydown="if(event.key==='Enter') sendSideChat()">
+        <button class="btn" onclick="sendSideChat()" style="padding:6px 10px; font-size:0.75rem;">SEND</button>
+      </div>
+    </div>
+
   </div>
 
 </div>

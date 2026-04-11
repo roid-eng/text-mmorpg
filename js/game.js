@@ -102,6 +102,10 @@ const Game = (() => {
     setText('stat-gold', `Gold: ${character.gold || 0}`);
     setText('stat-atk',  (equippedBonuses.atk > 0 || equippedBonuses.def > 0)
       ? `ATK+${equippedBonuses.atk} DEF+${equippedBonuses.def}` : '');
+    const expNeeded = character.level * 100;
+    const expPct    = Math.min(100, Math.floor((character.exp / expNeeded) * 100));
+    setWidth('stat-exp-bar', expPct);
+    setText('stat-exp-text', `EXP ${character.exp}/${expNeeded}`);
 
     // 모바일 헤더
     setText('mobile-stat-text',
@@ -129,10 +133,14 @@ const Game = (() => {
       '남서쪽': { dx: -55, dy:  55 },
     };
 
+    const connectedNodes = [];
+
     if (connections) {
       connections.forEach(conn => {
         const off = DIR_OFFSET[conn.direction] || { dx: 0, dy: -60 };
         const nx = cx + off.dx, ny = cy + off.dy;
+
+        connectedNodes.push({ x: nx, y: ny, zoneId: conn.to_zone.id });
 
         // 연결선
         ctx.strokeStyle = '#1e2a35';
@@ -164,6 +172,20 @@ const Game = (() => {
 
     const mapZoneName = document.getElementById('map-zone-name');
     if (mapZoneName) mapZoneName.textContent = zoneName;
+
+    // 클릭 이벤트: 연결 노드 클릭 시 이동
+    canvas.onclick = (e) => {
+      const rect   = canvas.getBoundingClientRect();
+      const scaleX = canvas.width  / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const my = (e.clientY - rect.top)  * scaleY;
+      connectedNodes.forEach(n => {
+        const dist = Math.sqrt((mx - n.x) ** 2 + (my - n.y) ** 2);
+        if (dist < 20) moveToZone(n.zoneId);
+      });
+    };
+    canvas.style.cursor = 'pointer';
   }
 
   // 전투 중 액션 버튼 비활성화 / 활성화 (전투 패널 내부, Logout, 후퇴 버튼 제외)

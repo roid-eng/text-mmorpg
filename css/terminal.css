@@ -308,7 +308,8 @@
 
 #stat-panel { grid-area: stat; }
 #main-panel { grid-area: main; display: flex; flex-direction: column; gap: 8px; }
-#map-panel  { grid-area: map; }
+#right-col  { grid-area: map; min-width: 0; }
+#map-panel  { overflow: hidden; min-width: 0; }
 
 .side-panel {
   position: sticky;
@@ -333,19 +334,25 @@
     gap: 8px;
   }
   .side-panel { position: static; }
-  #stat-panel { display: none; }
-  #map-panel  { display: none; }
-  #mobile-header { display: block !important; }
+  #stat-panel      { display: none; }
+  #right-col       { display: none; }
+  #chat-side-panel { display: none; }
+  #mobile-header   { display: block !important; }
 }
 
-/* PC: 모바일 헤더 숨김 */
+/* PC: 모바일 헤더 숨김, CHAT 버튼 숨김, 사이드 채팅 표시 */
 @media (min-width: 769px) {
-  #mobile-header { display: none !important; }
+  #mobile-header   { display: none !important; }
+  #btn-chat        { display: none; }
+  #chat-side-panel { display: block; }
 }
 
 /* 노드 맵 캔버스 */
 #node-map {
   display: block;
+  width: 100%;
+  height: auto;
+  max-width: 180px;
   margin: 0 auto;
   border: 1px solid var(--border);
 }
