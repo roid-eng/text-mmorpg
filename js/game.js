@@ -83,19 +83,87 @@ const Game = (() => {
   }
 
   function renderStats() {
-    const el = document.getElementById('stats');
-    if (!el || !character) return;
-    el.innerHTML = `
-      <span class="amber">${character.name}</span>
-      Lv.${character.level} ${character.class}
-      &nbsp;|&nbsp; HP ${character.hp}/${character.hp_max}
-      &nbsp;|&nbsp; MP ${character.mp}/${character.mp_max}
-      ${currentZoneName ? `&nbsp;|&nbsp; 지역: ${currentZoneName}` : ''}
-      &nbsp;|&nbsp; Gold: ${character.gold || 0}
-      ${(equippedBonuses.atk > 0 || equippedBonuses.def > 0)
-        ? `&nbsp;|&nbsp; <span class="amber">ATK+${equippedBonuses.atk} DEF+${equippedBonuses.def}</span>`
-        : ''}
-    `;
+    if (!character) return;
+
+    const hpPct = Math.round(character.hp / character.hp_max * 100);
+    const mpPct = Math.round(character.mp / character.mp_max * 100);
+
+    const setText  = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+    const setWidth = (id, pct)  => { const el = document.getElementById(id); if (el) el.style.width = pct + '%'; };
+
+    // PC 스탯 패널
+    setText('stat-name',  character.name);
+    setText('stat-class', character.class);
+    setText('stat-level', `Lv.${character.level}`);
+    setWidth('stat-hp-bar', hpPct);
+    setText('stat-hp-text', `HP ${character.hp}/${character.hp_max}`);
+    setWidth('stat-mp-bar', mpPct);
+    setText('stat-mp-text', `MP ${character.mp}/${character.mp_max}`);
+    setText('stat-gold', `Gold: ${character.gold || 0}`);
+    setText('stat-atk',  (equippedBonuses.atk > 0 || equippedBonuses.def > 0)
+      ? `ATK+${equippedBonuses.atk} DEF+${equippedBonuses.def}` : '');
+
+    // 모바일 헤더
+    setText('mobile-stat-text',
+      `Lv.${character.level} ${character.class} | HP ${character.hp}/${character.hp_max} | Gold ${character.gold || 0}`);
+  }
+
+  function renderNodeMap(zoneId, zoneName, connections) {
+    const canvas = document.getElementById('node-map');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const cx = W / 2, cy = H / 2;
+
+    ctx.fillStyle = '#0a0c0f';
+    ctx.fillRect(0, 0, W, H);
+
+    const DIR_OFFSET = {
+      '북쪽':   { dx:   0, dy: -70 },
+      '남쪽':   { dx:   0, dy:  70 },
+      '동쪽':   { dx:  70, dy:   0 },
+      '서쪽':   { dx: -70, dy:   0 },
+      '북동쪽': { dx:  55, dy: -55 },
+      '북서쪽': { dx: -55, dy: -55 },
+      '남동쪽': { dx:  55, dy:  55 },
+      '남서쪽': { dx: -55, dy:  55 },
+    };
+
+    if (connections) {
+      connections.forEach(conn => {
+        const off = DIR_OFFSET[conn.direction] || { dx: 0, dy: -60 };
+        const nx = cx + off.dx, ny = cy + off.dy;
+
+        // 연결선
+        ctx.strokeStyle = '#1e2a35';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(nx, ny);
+        ctx.stroke();
+
+        // 연결 지역 노드
+        ctx.fillStyle = '#a06010';
+        ctx.beginPath();
+        ctx.arc(nx, ny, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 연결 지역명
+        ctx.fillStyle = '#c8d8e8';
+        ctx.font = '9px "Share Tech Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(conn.to_zone.name, nx, ny + 20);
+      });
+    }
+
+    // 현재 지역 노드 (앰버, 중앙)
+    ctx.fillStyle = '#e8a020';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    const mapZoneName = document.getElementById('map-zone-name');
+    if (mapZoneName) mapZoneName.textContent = zoneName;
   }
 
   // 전투 중 액션 버튼 비활성화 / 활성화 (전투 패널 내부, Logout, 후퇴 버튼 제외)
@@ -156,6 +224,7 @@ const Game = (() => {
     }
 
     panel.style.display = 'block';
+    renderNodeMap(zoneId, zone.name, connections);
   }
 
   // zone_id 초기화 후 zoneId(int) 반환

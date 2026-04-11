@@ -290,3 +290,62 @@
   margin: 0 auto;
   padding: 24px 16px;
 }
+
+/* ------------------------------------------------------------
+   PC 3컬럼 레이아웃
+   ------------------------------------------------------------ */
+#game-wrapper {
+  display: grid;
+  grid-template-columns: 180px 1fr 200px;
+  grid-template-areas: "stat main map";
+  gap: 12px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px;
+  min-height: 100vh;
+  align-items: start;
+}
+
+#stat-panel { grid-area: stat; }
+#main-panel { grid-area: main; display: flex; flex-direction: column; gap: 8px; }
+#map-panel  { grid-area: map; }
+
+.side-panel {
+  position: sticky;
+  top: 12px;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+
+/* 모바일: 단일 컬럼 */
+@media (max-width: 768px) {
+  #game-wrapper {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "main"
+      "stat"
+      "map";
+    padding: 8px;
+    gap: 8px;
+  }
+  .side-panel { position: static; }
+  #stat-panel { display: none; }
+  #map-panel  { display: none; }
+  #mobile-header { display: block !important; }
+}
+
+/* PC: 모바일 헤더 숨김 */
+@media (min-width: 769px) {
+  #mobile-header { display: none !important; }
+}
+
+/* 노드 맵 캔버스 */
+#node-map {
+  display: block;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+}

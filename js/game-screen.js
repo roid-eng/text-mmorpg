@@ -10,6 +10,10 @@
   subscribeChat();
 })();
 
+function authLogout() {
+  Auth.signOut();
+}
+
 function actionExplore() {
   Game.explore();
 }
