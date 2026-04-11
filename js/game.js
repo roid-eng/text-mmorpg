@@ -2,6 +2,34 @@
  * game.js — Core game loop and screen orchestration
  */
 
+const MONSTER_ASCII = {
+  '들쥐':             `  /\\  /\\\n ( •ω• )\n  > づ`,
+  '초원 늑대':        `  / \\___\n (  •_• )\n  \\    \\—`,
+  '광폭한 멧돼지':    `  ^(  )^\n / oo  \\\n(||||||||)`,
+  '숲 고블린':        `  ,  .\n (o)(o)\n /|\\/|\\\n  d  b`,
+  '독거미':           `  /|\\|/\\\n ( • . •)\n  \\|/|\\|/`,
+  '고목숲 트롤':      `  _____\n |o   o|\n | \\_/ |\n/|     |\\`,
+  '빛의 정령':        `  * . *\n .✦ ✦.\n  * . *`,
+  '용암 도마뱀':      `    __\n __/  \\__\n(  oo   )\n \\______/`,
+  '화염 임프':        `  /\\  /\\\n ( >火< )\n  \\|  |/`,
+  '균열의 골렘':      ` [█████]\n [█ ▄ █]\n [█████]`,
+  '저주받은 기사':    `   |⚔|\n  [|||]\n   | |`,
+  '악령':             ` ░░░░░\n ░(◉◉)░\n ░░\\/░░`,
+  '고성의 마법사':    `  /\\_/\\\n ( ∙∙∙ )\n  \\___/★`,
+  '봉인의 수호자':    ` ╔═════╗\n ║◈   ◈║\n ╚═════╝`,
+  '제단의 사도':      `  ††††\n (×  ×)\n  /||\\ `,
+  '망각한 신의 파편': ` ✦ · ✦\n·(     )·\n ✦ · ✦`
+};
+window.MONSTER_ASCII = MONSTER_ASCII;
+
+const ZONE_ASCII = {
+  1: `~🌾~ 아르단 평야 ~🌾~`,
+  2: `🌲 실바란 고목숲 🌲`,
+  3: `/\\/\\ 이그나르의 균열 🔥`,
+  4: `⛩  아르카넨 고성  ⛩`,
+  5: `✦  망각의 제단  ✦`
+};
+
 const Game = (() => {
   let character = null;
   let logEl = null;
@@ -99,6 +127,8 @@ const Game = (() => {
       .eq('from_zone_id', zoneId);
     if (connErr) { log('연결 정보를 불러올 수 없습니다.', 'system'); return; }
 
+    const zoneHeader = ZONE_ASCII[zoneId];
+    if (zoneHeader) log(zoneHeader, 'story');
     log(`[ ${zone.name} ]`, 'story');
     log(zone.description, 'story');
     if (zone.level_min != null && zone.level_max != null) {

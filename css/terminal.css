@@ -260,6 +260,20 @@
 }
 
 /* ------------------------------------------------------------
+   Monster ASCII art (combat panel only)
+   ------------------------------------------------------------ */
+.monster-ascii {
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: var(--amber-dim);
+  text-align: center;
+  line-height: 1.4;
+  white-space: pre;
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* ------------------------------------------------------------
    Dimmed / muted text
    ------------------------------------------------------------ */
 .muted {
