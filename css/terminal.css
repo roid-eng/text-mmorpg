@@ -344,8 +344,20 @@
 /* PC: 모바일 헤더 숨김, CHAT 버튼 숨김, 사이드 채팅 표시 */
 @media (min-width: 769px) {
   #mobile-header   { display: none !important; }
+  #chat-panel      { display: none !important; }
   #btn-chat        { display: none; }
   #chat-side-panel { display: block; }
+}
+
+/* 모바일 버튼 크기 개선 */
+@media (max-width: 768px) {
+  .actions-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .btn {
+    padding: 14px 8px !important;
+    font-size: 0.9rem !important;
+  }
 }
 
 /* 노드 맵 캔버스 */

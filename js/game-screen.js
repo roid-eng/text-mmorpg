@@ -29,9 +29,30 @@ function actionInventory() {
 }
 
 function actionChat() {
-  const panel = document.getElementById('chat-panel');
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  if (window.innerWidth < 769) {
+    document.getElementById('chat-modal-overlay').style.display = 'flex';
+  } else {
+    document.getElementById('chat-side-input')?.focus();
+  }
 }
+
+window.closeChatModal = function() {
+  document.getElementById('chat-modal-overlay').style.display = 'none';
+};
+
+window.sendModalChat = async function() {
+  const input   = document.getElementById('chat-modal-input');
+  const message = input.value.trim();
+  if (!message || !_character) return;
+  input.value = '';
+
+  const session = await Auth.getSession();
+  await supabaseClient.from('text_mmorpg_chat').insert({
+    player_id: session.user.id,
+    username:  _character.name,
+    message,
+  });
+};
 
 function actionShop() {
   Game.openShopModal();
@@ -74,11 +95,10 @@ function appendChatLine(text) {
   line.className = 'log-line-chat';
   line.textContent = text;
 
-  const main = document.getElementById('chat-log');
-  if (main) { main.appendChild(line.cloneNode(true)); main.scrollTop = main.scrollHeight; }
-
-  const side = document.getElementById('chat-side-log');
-  if (side) { side.appendChild(line); side.scrollTop = side.scrollHeight; }
+  const side  = document.getElementById('chat-side-log');
+  const modal = document.getElementById('chat-modal-log');
+  if (side)  { side.appendChild(line.cloneNode(true));  side.scrollTop  = side.scrollHeight; }
+  if (modal) { modal.appendChild(line.cloneNode(true)); modal.scrollTop = modal.scrollHeight; }
 }
 
 function subscribeChat() {
