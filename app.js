@@ -26,7 +26,7 @@ const SCREEN_SCRIPTS = {
 };
 
 async function loadScreen(path) {
-  const res = await fetch(path);
+  const res = await fetch(`${path}?t=${Date.now()}`);
   const html = await res.text();
   document.getElementById('app').innerHTML = html;
 
