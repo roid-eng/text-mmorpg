@@ -336,9 +336,11 @@ const Game = (() => {
       line.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:3px 0;';
       line.innerHTML = `
         <span>- ${row.item_name} (${row.item_type})${bonusStr ? ` <span class="amber">${bonusStr}</span>` : ''}</span>
-        ${row.equipped
-          ? `<button class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="Game.unequipItem('${row.id}', '${row.item_id}')">[ 해제 ]</button>`
-          : `<button class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="Game.equipItem('${row.id}', '${row.item_id}')">[ 장착 ]</button>`}
+        ${row.item_type === 'consumable'
+          ? `<button class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="Game.useItem('${row.id}', '${row.item_id}')">[ 사용 ]</button>`
+          : row.equipped
+            ? `<button class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="Game.unequipItem('${row.id}', '${row.item_id}')">[ 해제 ]</button>`
+            : `<button class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="Game.equipItem('${row.id}', '${row.item_id}')">[ 장착 ]</button>`}
       `;
       list.appendChild(line);
     });
@@ -412,6 +414,48 @@ const Game = (() => {
     }
 
     renderStats();
+    document.getElementById('inventory-panel').style.display = 'none';
+    await showInventory();
+  }
+
+  async function useItem(inventoryId, itemId) {
+    const { data: invRow } = await supabaseClient
+      .from('text_mmorpg_inventory')
+      .select('item_name')
+      .eq('id', inventoryId)
+      .single();
+    if (!invRow) return;
+
+    const itemName = invRow.item_name;
+    let logMsg = '';
+
+    if (itemName === '체력 회복제') {
+      const heal = 50;
+      character.hp = Math.min(character.hp_max, character.hp + heal);
+      logMsg = `${itemName} 사용. HP +${heal}`;
+    } else if (itemName === '고급 체력 회복제') {
+      const heal = 150;
+      character.hp = Math.min(character.hp_max, character.hp + heal);
+      logMsg = `${itemName} 사용. HP +${heal}`;
+    } else if (itemName === '귀환 주문서') {
+      logMsg = `${itemName} 사용. 시작 지역으로 귀환합니다.`;
+      await supabaseClient.from('text_mmorpg_inventory').delete().eq('id', inventoryId);
+      character.zone_id = '1';
+      await Character.save(character);
+      renderStats();
+      log(logMsg, 'item');
+      document.getElementById('inventory-panel').style.display = 'none';
+      await moveToZone(1);
+      return;
+    } else {
+      log(`${itemName}: 사용할 수 없는 아이템입니다.`, 'system');
+      return;
+    }
+
+    await supabaseClient.from('text_mmorpg_inventory').delete().eq('id', inventoryId);
+    await Character.save(character);
+    renderStats();
+    log(logMsg, 'item');
     document.getElementById('inventory-panel').style.display = 'none';
     await showInventory();
   }
@@ -626,7 +670,7 @@ const Game = (() => {
 
     const sellable = rows.filter(r => {
       const def = itemMap[r.item_id];
-      return def && def.is_shop_item && def.price > 0;
+      return def && def.is_shop_item && def.price > 0 && !r.equipped;
     });
 
     if (sellable.length === 0) {
@@ -683,5 +727,5 @@ const Game = (() => {
     loadSellItems();
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab };
+  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab };
 })();
