@@ -41,6 +41,7 @@ const Game = (() => {
   let character = null;
   let logEl = null;
   let currentZoneName = null;
+  let currentZoneId = null;
   let currentShopName = '상점';
   let equippedBonuses = { atk: 0, def: 0 };
   let restInterval = null;
@@ -225,12 +226,15 @@ const Game = (() => {
       .eq('from_zone_id', zoneId);
     if (connErr) { log('연결 정보를 불러올 수 없습니다.', 'system'); return; }
 
-    const zoneHeader = ZONE_ASCII[zoneId];
-    if (zoneHeader) log(zoneHeader, 'story');
-    log(`[ ${zone.name} ]`, 'story');
-    log(zone.description, 'story');
-    if (zone.level_min != null && zone.level_max != null) {
-      log(`레벨 권장: ${zone.level_min}~${zone.level_max}`, 'system');
+    if (zoneId !== currentZoneId) {
+      const zoneHeader = ZONE_ASCII[zoneId];
+      if (zoneHeader) log(zoneHeader, 'story');
+      log(`[ ${zone.name} ]`, 'story');
+      log(zone.description, 'story');
+      if (zone.level_min != null && zone.level_max != null) {
+        log(`레벨 권장: ${zone.level_min}~${zone.level_max}`, 'system');
+      }
+      currentZoneId = zoneId;
     }
 
     // 탐험 퀘스트 진행 업데이트
@@ -1002,7 +1006,6 @@ const Game = (() => {
       .gte('assigned_at', todayISO);
 
     let quests = charQuests || [];
-    const activeQuests = quests.filter(cq => !cq.completed);
 
     if (quests.length === 0) {
       const { data: pool } = await supabaseClient
@@ -1030,16 +1033,11 @@ const Game = (() => {
       return;
     }
 
-    if (activeQuests.length === 0) {
-      listEl.innerHTML = '<span class="muted">오늘 퀘스트를 모두 완료했습니다.</span>';
-      return;
-    }
-
     const diffColor = { easy: '#4caf50', normal: 'var(--amber)', hard: '#f44336' };
     const diffLabel = { easy: 'EASY', normal: 'NORMAL', hard: 'HARD' };
 
     listEl.innerHTML = '';
-    activeQuests.forEach(cq => {
+    quests.forEach(cq => {
       const q = cq.quest;
       if (!q) return;
       const color = diffColor[q.difficulty] || 'var(--amber)';
@@ -1082,7 +1080,7 @@ const Game = (() => {
 
     await supabaseClient
       .from('text_mmorpg_character_quests')
-      .update({ completed: true, completed_at: new Date().toISOString() })
+      .delete()
       .eq('id', characterQuestId);
 
     log(`퀘스트 완료! EXP +${rewardExp}, Gold +${rewardGold} 획득.`, 'item');
