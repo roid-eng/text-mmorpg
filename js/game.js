@@ -1002,6 +1002,7 @@ const Game = (() => {
       .gte('assigned_at', todayISO);
 
     let quests = charQuests || [];
+    const activeQuests = quests.filter(cq => !cq.completed);
 
     if (quests.length === 0) {
       const { data: pool } = await supabaseClient
@@ -1029,11 +1030,16 @@ const Game = (() => {
       return;
     }
 
+    if (activeQuests.length === 0) {
+      listEl.innerHTML = '<span class="muted">오늘 퀘스트를 모두 완료했습니다.</span>';
+      return;
+    }
+
     const diffColor = { easy: '#4caf50', normal: 'var(--amber)', hard: '#f44336' };
     const diffLabel = { easy: 'EASY', normal: 'NORMAL', hard: 'HARD' };
 
     listEl.innerHTML = '';
-    quests.forEach(cq => {
+    activeQuests.forEach(cq => {
       const q = cq.quest;
       if (!q) return;
       const color = diffColor[q.difficulty] || 'var(--amber)';
@@ -1076,7 +1082,7 @@ const Game = (() => {
 
     await supabaseClient
       .from('text_mmorpg_character_quests')
-      .delete()
+      .update({ completed: true, completed_at: new Date().toISOString() })
       .eq('id', characterQuestId);
 
     log(`퀘스트 완료! EXP +${rewardExp}, Gold +${rewardGold} 획득.`, 'item');
