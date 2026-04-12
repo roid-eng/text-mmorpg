@@ -1061,10 +1061,25 @@ const Game = (() => {
   }
 
   async function claimQuestReward(characterQuestId, rewardExp, rewardGold) {
-    // 카드 즉시 DOM 제거 (중복 수령 방지)
+    // 1. 버튼 즉시 비활성화 (중복 클릭 방지)
     const card = document.getElementById(`quest-card-${characterQuestId}`);
-    if (!card) return;
-    card.remove();
+    const btn = card?.querySelector('button');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
+
+    // 2. DB DELETE (await)
+    const { error } = await supabaseClient
+      .from('text_mmorpg_character_quests')
+      .delete()
+      .eq('id', characterQuestId);
+
+    if (error) {
+      log('보상 수령에 실패했습니다. 다시 시도하십시오.', 'system');
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+      return;
+    }
+
+    // 3. 카드 제거
+    card?.remove();
 
     // 남은 카드 없으면 완료 문구 표시
     const listEl = document.getElementById('quest-list');
@@ -1072,7 +1087,7 @@ const Game = (() => {
       listEl.innerHTML = '<span class="muted">오늘 퀘스트를 모두 완료했습니다.</span>';
     }
 
-    // 보상 지급
+    // 4. 보상 지급
     character.exp = (character.exp || 0) + rewardExp;
     character.gold = (character.gold || 0) + rewardGold;
 
@@ -1084,12 +1099,7 @@ const Game = (() => {
     await Character.save(character);
     renderStats();
 
-    // DB DELETE (UI 갱신 후 비동기 처리)
-    supabaseClient
-      .from('text_mmorpg_character_quests')
-      .delete()
-      .eq('id', characterQuestId);
-
+    // 5. 로그
     log(`퀘스트 완료! EXP +${rewardExp}, Gold +${rewardGold} 획득.`, 'item');
   }
 
