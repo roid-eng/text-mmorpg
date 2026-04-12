@@ -3,19 +3,19 @@ CREATE TABLE text_mmorpg_quests (
   id SERIAL PRIMARY KEY,
   title TEXT NOT NULL,
   description TEXT,
-  quest_category TEXT NOT NULL DEFAULT 'daily', -- daily / main / sub
-  type TEXT NOT NULL,                            -- monster / explore
+  quest_category TEXT NOT NULL DEFAULT 'daily',
+  type TEXT NOT NULL,
   target_name TEXT,
   target_count INT NOT NULL DEFAULT 1,
   reward_exp INT NOT NULL DEFAULT 0,
   reward_gold INT NOT NULL DEFAULT 0,
-  difficulty TEXT NOT NULL DEFAULT 'normal'      -- easy / normal / hard
+  difficulty TEXT NOT NULL DEFAULT 'normal'
 );
 
 -- 캐릭터별 퀘스트 진행 테이블
 CREATE TABLE text_mmorpg_character_quests (
   id SERIAL PRIMARY KEY,
-  character_id INT REFERENCES text_mmorpg_characters(id),
+  character_id UUID REFERENCES text_mmorpg_characters(id),
   quest_id INT REFERENCES text_mmorpg_quests(id),
   progress INT NOT NULL DEFAULT 0,
   completed BOOLEAN NOT NULL DEFAULT false,
@@ -54,7 +54,7 @@ CREATE POLICY "char_quests_update" ON text_mmorpg_character_quests
     )
   );
 
--- 퀘스트 풀 데이터 (일일 퀘스트 11종)
+-- 퀘스트 풀 데이터
 INSERT INTO text_mmorpg_quests
   (title, description, quest_category, type, target_name, target_count, reward_exp, reward_gold, difficulty)
 VALUES
