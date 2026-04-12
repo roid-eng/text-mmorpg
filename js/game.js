@@ -466,15 +466,21 @@ const Game = (() => {
     } else if (outcome === 'retreat') {
       await Character.save(character);
     } else if (outcome === 'defeat') {
+      const VILLAGE_ZONE_ID = 6;
       character.hp = Math.floor(character.hp_max * 0.3);
-      const { data: startZone } = await supabaseClient
-        .from('text_mmorpg_zones')
-        .select('id')
-        .eq('is_start', true)
-        .single();
-      character.zone_id = startZone ? String(startZone.id) : character.zone_id;
+      character.zone_id = String(VILLAGE_ZONE_ID);
       await Character.save(character);
-      log('✨ 체력을 회복하여 다시 일어섰습니다.', 'levelup');
+      const { data: villageZone } = await supabaseClient
+        .from('text_mmorpg_zones')
+        .select('name')
+        .eq('id', VILLAGE_ZONE_ID)
+        .single();
+      const villageName = villageZone?.name?.replace('마을 — ', '') || '마을';
+      log(`쓰러졌습니다. ${villageName}(으)로 후송됩니다.`, 'system');
+      renderStats();
+      await moveToZone(VILLAGE_ZONE_ID);
+      setActionsDisabled(false);
+      return;
     }
 
     renderStats();

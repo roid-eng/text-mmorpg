@@ -48,6 +48,7 @@ const Character = (() => {
         hp_max,
         mp: mp_max,
         mp_max,
+        zone_id: '6',
       })
       .select()
       .single();
