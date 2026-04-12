@@ -233,6 +233,27 @@ const Game = (() => {
       log(`레벨 권장: ${zone.level_min}~${zone.level_max}`, 'system');
     }
 
+    // 탐험 퀘스트 진행 업데이트
+    if (character) {
+      const exploreToday = new Date(); exploreToday.setHours(0, 0, 0, 0);
+      const { data: eQuestRows } = await supabaseClient
+        .from('text_mmorpg_character_quests')
+        .select('id, quest:quest_id(title, type, target_name)')
+        .eq('character_id', character.id)
+        .eq('completed', false)
+        .gte('assigned_at', exploreToday.toISOString());
+      const exploreMatch = (eQuestRows || []).filter(r =>
+        r.quest?.type === 'explore' && r.quest?.target_name === zone.name
+      );
+      for (const cq of exploreMatch) {
+        await supabaseClient
+          .from('text_mmorpg_character_quests')
+          .update({ progress: 1, completed: true, completed_at: new Date().toISOString() })
+          .eq('id', cq.id);
+        log(`퀘스트 완료: ${cq.quest.title}! 게시판에서 보상을 수령하세요.`, 'item');
+      }
+    }
+
     const panel   = document.getElementById('zone-actions');
     const btnWrap = document.getElementById('zone-move-buttons');
 
@@ -286,7 +307,7 @@ const Game = (() => {
       villagePanel.style.marginTop = '10px';
       villagePanel.innerHTML = `
         <div class="panel-title">[ 마을 시설 ]</div>
-        <button class="btn" style="width:100%; margin-bottom:6px; opacity:0.4;" disabled>[ 퀘스트 게시판 ] (준비 중)</button>
+        <button class="btn" style="width:100%; margin-bottom:6px;" onclick="Game.openQuestModal()">[ 퀘스트 게시판 ]</button>
       `;
       panel.appendChild(villagePanel);
     }
@@ -445,6 +466,35 @@ const Game = (() => {
         log(`레벨 업! → Lv.${character.level}`, 'levelup');
       }
       await Character.save(character);
+
+      // 몬스터 퀘스트 진행 업데이트
+      const questToday = new Date(); questToday.setHours(0, 0, 0, 0);
+      const { data: mQuestRows } = await supabaseClient
+        .from('text_mmorpg_character_quests')
+        .select('id, progress, quest:quest_id(title, target_count, type, target_name)')
+        .eq('character_id', character.id)
+        .eq('completed', false)
+        .gte('assigned_at', questToday.toISOString());
+      const matching = (mQuestRows || []).filter(r =>
+        r.quest?.type === 'monster' && r.quest?.target_name === monster.name
+      );
+      for (const cq of matching) {
+        const newProgress = (cq.progress || 0) + 1;
+        const isDone = newProgress >= cq.quest.target_count;
+        await supabaseClient
+          .from('text_mmorpg_character_quests')
+          .update({
+            progress: newProgress,
+            completed: isDone,
+            ...(isDone ? { completed_at: new Date().toISOString() } : {}),
+          })
+          .eq('id', cq.id);
+        if (isDone) {
+          log(`퀘스트 완료: ${cq.quest.title}! 게시판에서 보상을 수령하세요.`, 'item');
+        } else {
+          log(`퀘스트 진행: ${cq.quest.title} (${newProgress}/${cq.quest.target_count})`, 'system');
+        }
+      }
 
       // 장비 드롭 (40% 확률)
       const zoneId = parseInt(character.zone_id);
@@ -926,5 +976,112 @@ const Game = (() => {
     loadSellItems();
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab };
+  // ── 퀘스트 ────────────────────────────────────────────────
+  function openQuestModal() {
+    const overlay = document.getElementById('quest-modal-overlay');
+    overlay.style.display = 'flex';
+    loadDailyQuests();
+  }
+
+  function closeQuestModal() {
+    document.getElementById('quest-modal-overlay').style.display = 'none';
+  }
+
+  async function loadDailyQuests() {
+    const listEl = document.getElementById('quest-list');
+    listEl.innerHTML = '<span class="muted">불러오는 중...</span>';
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayISO = today.toISOString();
+
+    const { data: charQuests } = await supabaseClient
+      .from('text_mmorpg_character_quests')
+      .select('id, progress, completed, quest:quest_id(title, description, type, target_count, reward_exp, reward_gold, difficulty)')
+      .eq('character_id', character.id)
+      .gte('assigned_at', todayISO);
+
+    let quests = charQuests || [];
+
+    if (quests.length === 0) {
+      const { data: pool } = await supabaseClient
+        .from('text_mmorpg_quests')
+        .select('*');
+      if (!pool || pool.length === 0) {
+        listEl.innerHTML = '<span class="muted">퀘스트가 없습니다.</span>';
+        return;
+      }
+      const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, 3);
+      const { data: inserted } = await supabaseClient
+        .from('text_mmorpg_character_quests')
+        .insert(shuffled.map(q => ({
+          character_id: character.id,
+          quest_id: q.id,
+          progress: 0,
+          completed: false,
+        })))
+        .select('id, progress, completed, quest:quest_id(title, description, type, target_count, reward_exp, reward_gold, difficulty)');
+      quests = inserted || [];
+    }
+
+    if (quests.length === 0) {
+      listEl.innerHTML = '<span class="muted">퀘스트를 배정할 수 없습니다.</span>';
+      return;
+    }
+
+    const diffColor = { easy: '#4caf50', normal: 'var(--amber)', hard: '#f44336' };
+    const diffLabel = { easy: 'EASY', normal: 'NORMAL', hard: 'HARD' };
+
+    listEl.innerHTML = '';
+    quests.forEach(cq => {
+      const q = cq.quest;
+      if (!q) return;
+      const color = diffColor[q.difficulty] || 'var(--amber)';
+      const claimDisabled = cq.completed ? '' : 'disabled style="opacity:0.4;"';
+      const card = document.createElement('div');
+      card.style.cssText = 'border:1px solid var(--amber-dim); padding:12px; margin-bottom:10px;';
+      card.innerHTML = `
+        <div style="margin-bottom:4px;">
+          <span style="color:${color}; font-size:0.75rem;">[${diffLabel[q.difficulty] || q.difficulty}]</span>
+          <span style="margin-left:6px;">${q.title}</span>
+        </div>
+        <div class="muted" style="font-size:0.8rem; margin-bottom:6px;">${q.description || ''}</div>
+        <div style="font-size:0.85rem; margin-bottom:4px;">진행: ${cq.progress} / ${q.target_count}</div>
+        <div class="muted" style="font-size:0.8rem; margin-bottom:8px;">보상: EXP ${q.reward_exp} / Gold ${q.reward_gold}</div>
+        <button class="btn" ${claimDisabled}
+          onclick="Game.claimQuestReward(${cq.id}, ${q.reward_exp}, ${q.reward_gold})">[ 완료 수령 ]</button>
+      `;
+      listEl.appendChild(card);
+    });
+  }
+
+  async function claimQuestReward(characterQuestId, rewardExp, rewardGold) {
+    const { data: cq } = await supabaseClient
+      .from('text_mmorpg_character_quests')
+      .select('completed')
+      .eq('id', characterQuestId)
+      .single();
+    if (!cq?.completed) return;
+
+    character.exp = (character.exp || 0) + rewardExp;
+    character.gold = (character.gold || 0) + rewardGold;
+
+    const expNeeded = character.level * 100;
+    if (character.exp >= expNeeded) {
+      character = Character.levelUpStats(character);
+      log(`레벨 업! → Lv.${character.level}`, 'levelup');
+    }
+    await Character.save(character);
+    renderStats();
+
+    await supabaseClient
+      .from('text_mmorpg_character_quests')
+      .delete()
+      .eq('id', characterQuestId);
+
+    log(`퀘스트 완료! EXP +${rewardExp}, Gold +${rewardGold} 획득.`, 'item');
+    loadDailyQuests();
+  }
+
+  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, claimQuestReward };
 })();

@@ -59,6 +59,20 @@
     </div>
   </div>
 
+  <!-- Quest modal -->
+  <div id="quest-modal-overlay" style="display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.85); z-index:100;
+    justify-content:center; align-items:center;">
+    <div style="width:90%; max-width:480px; background:var(--bg-panel);
+      border:1px solid var(--amber-dim); padding:20px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+        <span class="amber">[ 퀘스트 게시판 ]</span>
+        <button class="btn" onclick="Game.closeQuestModal()" style="padding:2px 8px;">[ X ]</button>
+      </div>
+      <div id="quest-list"></div>
+    </div>
+  </div>
+
   <!-- Shop modal -->
   <div id="shop-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
     <div style="background:var(--bg-panel); border:1px solid var(--amber-dim); padding:20px 24px; width:90%; max-width:480px; max-height:80vh; overflow-y:auto;">
