@@ -18,7 +18,14 @@ const MONSTER_ASCII = {
   '고성의 마법사': `  /\\\n (oo)\n /||\\n  / \\`,
   '봉인의 수호자': ` [##]\n (==)\n /||\\n /  \\`,
   '제단의 사도': `  /\\\n (o*)\n /||\\n  / \\`,
-  '망각한 신의 파편': `  /\\  /\\\n (  \\/  )\n (  ..  )\n  \\____/`
+  '망각한 신의 파편': `  /\\  /\\\n (  \\/  )\n (  ..  )\n  \\____/`,
+  '슬라임':      `  .~~~.\n ( o o )\n  \\___/`,
+  '오크':        `  /\\\n (>_<)\n /||\\\ \n /  \\`,
+  '오크 궁수':   `  /\\\n (- -)\n /)\(\\n /  \\`,
+  '독버섯 포자': `  _*_\n (* *)\n /| |\\`,
+  '오크 전사':   `  /\\\n (>o<)\n [|||]\n /   \\`,
+  '좀비':        `  /\\\n (~_~)\n /||\\\ \n /  \\`,
+  '해골':        `  ___\n (x x)\n  \\|/\n  / \\`
 };
 window.MONSTER_ASCII = MONSTER_ASCII;
 
@@ -390,6 +397,7 @@ const Game = (() => {
       stat_con:    m.stat_con || 0,
       expReward:   m.exp,
       goldReward:  m.gold_reward || 0,
+      level:       m.level || 1,
       loot:        null,
     };
   }
@@ -413,8 +421,24 @@ const Game = (() => {
     character = { ...character, ...updatedChar };
 
     if (outcome === 'victory') {
-      character.exp += monster.expReward;
+      const levelDiff = (monster.level || 1) - character.level;
+      let expMultiplier = 1.0;
+      if (levelDiff >= 5)       expMultiplier = 1.5;
+      else if (levelDiff >= 3)  expMultiplier = 1.25;
+      else if (levelDiff <= -5) expMultiplier = 0.5;
+      else if (levelDiff <= -3) expMultiplier = 0.75;
+
+      const expGained = Math.floor(monster.expReward * expMultiplier);
+      character.exp += expGained;
       character.gold = (character.gold || 0) + goldEarned;
+
+      let expLog = `${expGained} EXP`;
+      if (expMultiplier === 1.5)       expLog += ' (강적 보너스 +50%)';
+      else if (expMultiplier === 1.25) expLog += ' (강적 보너스 +25%)';
+      else if (expMultiplier === 0.5)  expLog += ' (경험치 감소)';
+      else if (expMultiplier === 0.75) expLog += ' (경험치 감소)';
+      log(`${expLog}, ${goldEarned} Gold 획득.`, 'system');
+
       const expNeeded = character.level * 100;
       if (character.exp >= expNeeded) {
         character = Character.levelUpStats(character);
