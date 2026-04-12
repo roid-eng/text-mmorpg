@@ -1043,6 +1043,7 @@ const Game = (() => {
       const color = diffColor[q.difficulty] || 'var(--amber)';
       const claimDisabled = cq.completed ? '' : 'disabled style="opacity:0.4;"';
       const card = document.createElement('div');
+      card.id = `quest-card-${cq.id}`;
       card.style.cssText = 'border:1px solid var(--amber-dim); padding:12px; margin-bottom:10px;';
       card.innerHTML = `
         <div style="margin-bottom:4px;">
@@ -1060,13 +1061,18 @@ const Game = (() => {
   }
 
   async function claimQuestReward(characterQuestId, rewardExp, rewardGold) {
-    const { data: cq } = await supabaseClient
-      .from('text_mmorpg_character_quests')
-      .select('completed')
-      .eq('id', characterQuestId)
-      .single();
-    if (!cq?.completed) return;
+    // 카드 즉시 DOM 제거 (중복 수령 방지)
+    const card = document.getElementById(`quest-card-${characterQuestId}`);
+    if (!card) return;
+    card.remove();
 
+    // 남은 카드 없으면 완료 문구 표시
+    const listEl = document.getElementById('quest-list');
+    if (listEl && listEl.children.length === 0) {
+      listEl.innerHTML = '<span class="muted">오늘 퀘스트를 모두 완료했습니다.</span>';
+    }
+
+    // 보상 지급
     character.exp = (character.exp || 0) + rewardExp;
     character.gold = (character.gold || 0) + rewardGold;
 
@@ -1078,13 +1084,13 @@ const Game = (() => {
     await Character.save(character);
     renderStats();
 
-    await supabaseClient
+    // DB DELETE (UI 갱신 후 비동기 처리)
+    supabaseClient
       .from('text_mmorpg_character_quests')
       .delete()
       .eq('id', characterQuestId);
 
     log(`퀘스트 완료! EXP +${rewardExp}, Gold +${rewardGold} 획득.`, 'item');
-    loadDailyQuests();
   }
 
   return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, claimQuestReward };
