@@ -245,6 +245,33 @@ const Game = (() => {
       });
     }
 
+    // 마을 여부 판단
+    const isVillage = zoneId === 6 || zone.name.includes('마을');
+
+    // 기존 마을 패널 제거
+    const existingVillagePanel = document.getElementById('village-panel');
+    if (existingVillagePanel) existingVillagePanel.remove();
+
+    // EXPLORE 버튼 마을에서 비활성화
+    const exploreBtn = document.getElementById('btn-explore');
+    if (exploreBtn) {
+      exploreBtn.disabled = isVillage;
+      exploreBtn.style.opacity = isVillage ? '0.4' : '';
+    }
+
+    if (isVillage) {
+      log('이 지역에는 몬스터가 없습니다.', 'system');
+      const villagePanel = document.createElement('div');
+      villagePanel.id = 'village-panel';
+      villagePanel.style.marginTop = '10px';
+      villagePanel.innerHTML = `
+        <div class="panel-title">[ 마을 시설 ]</div>
+        <button class="btn" onclick="actionShop()" style="width:100%; margin-bottom:6px;">[ 아르단 잡화점 ]</button>
+        <button class="btn" style="width:100%; margin-bottom:6px; opacity:0.4;" disabled>[ 퀘스트 게시판 ] (준비 중)</button>
+      `;
+      panel.appendChild(villagePanel);
+    }
+
     panel.style.display = 'block';
     renderNodeMap(zoneId, zone.name, connections);
   }
@@ -596,10 +623,17 @@ const Game = (() => {
       restBtn.textContent = '[ 휴식 중단 ]';
     }
 
-    log('휴식을 시작합니다.', 'system');
+    const zoneId = parseInt(character.zone_id);
+    const isVillageRest = zoneId === 6 || (currentZoneName && currentZoneName.includes('마을'));
 
-    const hpPerSec = Math.max(1, Math.floor((character.stat_con || 1) * 0.5));
-    const mpPerSec = Math.max(1, Math.floor((character.stat_wiz || 1) * 0.3));
+    if (isVillageRest) {
+      log('[ 아르단 마을 ] 편안한 휴식. 회복 속도가 증가합니다.', 'story');
+    } else {
+      log('휴식을 시작합니다.', 'system');
+    }
+
+    const hpPerSec = Math.max(1, Math.floor((character.stat_con || 1) * (isVillageRest ? 1.0 : 0.5)));
+    const mpPerSec = Math.max(1, Math.floor((character.stat_wiz || 1) * (isVillageRest ? 0.6 : 0.3)));
 
     restInterval = setInterval(() => {
       const hpFull = character.hp >= character.hp_max;
