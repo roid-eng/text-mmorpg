@@ -34,6 +34,7 @@ const Game = (() => {
   let character = null;
   let logEl = null;
   let currentZoneName = null;
+  let currentShopName = '상점';
   let equippedBonuses = { atk: 0, def: 0 };
   let restInterval = null;
 
@@ -259,6 +260,18 @@ const Game = (() => {
       exploreBtn.style.opacity = isVillage ? '0.4' : '';
     }
 
+    // SHOP 버튼 마을에서만 활성화
+    const shopBtn = document.getElementById('btn-shop');
+    if (shopBtn) {
+      shopBtn.disabled = !isVillage;
+      shopBtn.style.opacity = isVillage ? '1' : '0.4';
+    }
+
+    // 상점명 생성 및 저장
+    currentShopName = isVillage
+      ? zone.name.replace('마을 — ', '') + ' 잡화점'
+      : '상점';
+
     if (isVillage) {
       log('이 지역에는 몬스터가 없습니다.', 'system');
       const villagePanel = document.createElement('div');
@@ -266,7 +279,6 @@ const Game = (() => {
       villagePanel.style.marginTop = '10px';
       villagePanel.innerHTML = `
         <div class="panel-title">[ 마을 시설 ]</div>
-        <button class="btn" onclick="actionShop()" style="width:100%; margin-bottom:6px;">[ 아르단 잡화점 ]</button>
         <button class="btn" style="width:100%; margin-bottom:6px; opacity:0.4;" disabled>[ 퀘스트 게시판 ] (준비 중)</button>
       `;
       panel.appendChild(villagePanel);
@@ -710,6 +722,8 @@ const Game = (() => {
   function openShopModal() {
     const overlay = document.getElementById('shop-modal-overlay');
     if (overlay) overlay.style.display = 'flex';
+    const titleEl = document.getElementById('shop-modal-title');
+    if (titleEl) titleEl.textContent = `[ ${currentShopName} ]`;
     shopTab('buy');
   }
 
