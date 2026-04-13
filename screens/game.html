@@ -29,12 +29,55 @@
   <div id="main-panel">
 
     <!-- 모바일 전용 헤더 (PC에선 숨김) -->
-    <div id="mobile-header" class="panel">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span class="amber" style="font-size:1.1rem;">MYTHARION</span>
-        <button class="btn" onclick="authLogout()" style="padding:4px 10px;">LOGOUT</button>
+    <div id="mobile-header" class="panel" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span class="amber" style="font-size:1rem; letter-spacing:2px;">MYTHARION</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span id="mobile-char-info" class="muted" style="font-size:0.75rem;"></span>
+          <button class="btn" onclick="authLogout()" style="padding:4px 8px; font-size:0.75rem;">LOGOUT</button>
+        </div>
       </div>
-      <div id="mobile-stat-text" class="muted" style="font-size:0.75rem; margin-top:4px;"></div>
+
+      <!-- HP 바 -->
+      <div style="margin-bottom:4px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+          <span class="muted" style="font-size:0.7rem;">HP</span>
+          <span id="mobile-hp-text" class="muted" style="font-size:0.7rem;"></span>
+        </div>
+        <div class="stat-bar" style="height:6px;">
+          <div id="mobile-hp-bar" class="stat-bar-fill hp" style="width:100%;"></div>
+        </div>
+      </div>
+
+      <!-- MP 바 -->
+      <div style="margin-bottom:4px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+          <span class="muted" style="font-size:0.7rem;">MP</span>
+          <span id="mobile-mp-text" class="muted" style="font-size:0.7rem;"></span>
+        </div>
+        <div class="stat-bar" style="height:6px;">
+          <div id="mobile-mp-bar" class="stat-bar-fill mp" style="width:100%;"></div>
+        </div>
+      </div>
+
+      <!-- EXP 바 -->
+      <div style="margin-bottom:6px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+          <span class="muted" style="font-size:0.7rem;">EXP</span>
+          <span id="mobile-exp-text" class="muted" style="font-size:0.7rem;"></span>
+        </div>
+        <div class="stat-bar" style="height:6px;">
+          <div id="mobile-exp-bar" class="stat-bar-fill"
+            style="width:0%; background:var(--amber);"></div>
+        </div>
+      </div>
+
+      <!-- ATK / DEF / Gold 수치 -->
+      <div style="display:flex; gap:12px; font-size:0.75rem;">
+        <span class="muted">ATK <span id="mobile-atk" class="amber"></span></span>
+        <span class="muted">DEF <span id="mobile-def" class="amber"></span></span>
+        <span class="muted">Gold <span id="mobile-gold" class="amber"></span></span>
+      </div>
     </div>
 
     <!-- 게임 로그 -->

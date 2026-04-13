@@ -196,8 +196,18 @@ const Game = (() => {
     setText('stat-exp-text', `EXP ${character.exp}/${expNeeded}`);
 
     // 모바일 헤더
-    setText('mobile-stat-text',
-      `Lv.${character.level} ${character.class} | HP ${character.hp}/${character.hp_max} | Gold ${character.gold || 0}`);
+    const mSetText  = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    const mSetWidth = (id, p) => { const el = document.getElementById(id); if (el) el.style.width = p + '%'; };
+    mSetText('mobile-char-info', `${character.name} Lv.${character.level} ${character.class}`);
+    mSetWidth('mobile-hp-bar',  Math.floor((character.hp  / character.hp_max) * 100));
+    mSetText ('mobile-hp-text', `${character.hp}/${character.hp_max}`);
+    mSetWidth('mobile-mp-bar',  Math.floor((character.mp  / character.mp_max) * 100));
+    mSetText ('mobile-mp-text', `${character.mp}/${character.mp_max}`);
+    mSetWidth('mobile-exp-bar', expPct);
+    mSetText ('mobile-exp-text', `${character.exp}/${expNeeded}`);
+    mSetText ('mobile-atk',  equippedBonuses.atk || 0);
+    mSetText ('mobile-def',  equippedBonuses.def || 0);
+    mSetText ('mobile-gold', character.gold || 0);
   }
 
   function renderNodeMap(zoneId, zoneName, connections) {
