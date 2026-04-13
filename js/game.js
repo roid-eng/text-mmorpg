@@ -296,13 +296,6 @@ const Game = (() => {
       exploreBtn.style.opacity = isVillage ? '0.4' : '';
     }
 
-    // SHOP 버튼 마을에서만 활성화
-    const shopBtn = document.getElementById('btn-shop');
-    if (shopBtn) {
-      shopBtn.disabled = !isVillage;
-      shopBtn.style.opacity = isVillage ? '1' : '0.4';
-    }
-
     // 상점명 생성 및 저장
     currentShopName = isVillage
       ? zone.name.replace('마을 — ', '') + ' 잡화점'
@@ -314,9 +307,7 @@ const Game = (() => {
       villagePanel.id = 'village-panel';
       villagePanel.style.marginTop = '10px';
       villagePanel.innerHTML = `
-        <div class="panel-title">[ 마을 시설 ]</div>
-        <button class="btn" style="width:100%; margin-bottom:6px;" onclick="Game.openQuestModal()">[ 퀘스트 게시판 ]</button>
-        <button class="btn" style="width:100%; margin-bottom:6px;" onclick="Game.openNpcDialogue('장로 에르난')">[ 장로 에르난에게 말 걸기 ]</button>
+        <button class="btn" style="width:100%; margin-bottom:6px;" onclick="Game.openVillageModal()">[ 마을 시설 ]</button>
       `;
       panel.appendChild(villagePanel);
     }
@@ -985,6 +976,26 @@ const Game = (() => {
     loadSellItems();
   }
 
+  // ── 마을 시설 ──────────────────────────────────────────────
+
+  function openVillageModal() {
+    const overlay = document.getElementById('village-modal-overlay');
+    const content = document.getElementById('village-modal-content');
+    content.innerHTML = `
+      <button class="btn" onclick="Game.closeVillageModal(); Game.openNpcDialogue('장로 에르난')"
+        style="width:100%; margin-bottom:8px;">[ 장로 에르난에게 말 걸기 ]</button>
+      <button class="btn" onclick="Game.closeVillageModal(); Game.openShopModal()"
+        style="width:100%; margin-bottom:8px;">[ ${currentShopName} ]</button>
+      <button class="btn" onclick="Game.closeVillageModal(); Game.openQuestModal()"
+        style="width:100%; margin-bottom:8px;">[ 퀘스트 게시판 ]</button>
+    `;
+    overlay.style.display = 'flex';
+  }
+
+  function closeVillageModal() {
+    document.getElementById('village-modal-overlay').style.display = 'none';
+  }
+
   // ── 퀘스트 ────────────────────────────────────────────────
   function openQuestModal() {
     const overlay = document.getElementById('quest-modal-overlay');
@@ -1198,5 +1209,5 @@ const Game = (() => {
     if (e.key === 'Enter') npcNext();
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, claimQuestReward, openNpcDialogue, npcNext, closeNpcDialogue };
+  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, claimQuestReward, openNpcDialogue, npcNext, closeNpcDialogue, openVillageModal, closeVillageModal };
 })();
