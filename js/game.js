@@ -1351,22 +1351,35 @@ const Game = (() => {
 
     if (!npc) { log(`${npcName}: 대화를 나눌 수 없습니다.`, 'system'); return; }
 
+    // story_progress 기준으로 dialogue_type 결정
+    let dialogueType = 'default';
+    if (npcName === '장로 에르난') {
+      const progress = character.story_progress || 0;
+      if (progress === 0) {
+        dialogueType = _questOfferShown ? 'quest_offer' : 'default';
+      } else if (progress === 1) {
+        dialogueType = _questOfferShown ? 'in_progress_1' : 'default';
+      } else if (progress === 2) {
+        dialogueType = 'in_progress_2';
+      } else if (progress === 3) {
+        dialogueType = 'in_progress_3';
+      } else {
+        dialogueType = 'completed';
+      }
+    }
+
     const { data: dialogues } = await supabaseClient
       .from('text_mmorpg_npc_dialogues')
       .select('*')
       .eq('npc_id', npc.id)
+      .eq('dialogue_type', dialogueType)
       .order('sequence', { ascending: true });
 
     if (!dialogues || dialogues.length === 0) {
       log(`${npcName}: ...`, 'system'); return;
     }
 
-    // 에르난 재대화: 기본 대사를 이미 본 경우 퀘스트 대사(seq 7~)부터 시작
-    if (npcName === '장로 에르난' && (character.story_progress || 0) === 0 && _questOfferShown) {
-      _npcDialogues = dialogues.filter(d => d.sequence >= 7);
-    } else {
-      _npcDialogues = dialogues;
-    }
+    _npcDialogues = dialogues;
     _npcIndex = 0;
     _currentNpcName = npcName;
 
@@ -1417,11 +1430,17 @@ const Game = (() => {
     _npcIndex++;
     if (_npcIndex < _npcDialogues.length) {
       showNpcLine();
-    } else if (_currentNpcName === '장로 에르난' && (character.story_progress || 0) === 0) {
-      await showQuestOffer();
     } else {
-      await onNpcDialogueComplete(_currentNpcName);
-      closeNpcDialogue();
+      const progress = character.story_progress || 0;
+      const needsOffer =
+        _currentNpcName === '장로 에르난' &&
+        (progress === 0 || (progress === 1 && !_questOfferShown));
+      if (needsOffer) {
+        await showQuestOffer();
+      } else {
+        await onNpcDialogueComplete(_currentNpcName);
+        closeNpcDialogue();
+      }
     }
   }
 
