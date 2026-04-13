@@ -54,6 +54,7 @@ const Game = (() => {
   let _npcIndex = 0;
   let _npcTyping = false;
   let _npcTypingTimer = null;
+  let _currentNpcName = null;
 
   function log(text, type = '') {
     if (!logEl) return;
@@ -79,6 +80,7 @@ const Game = (() => {
     log(`Mytharion에 오신 것을 환영합니다, ${character.name}.`, 'story');
     log(`직업: ${character.class}  |  레벨: ${character.level}`, 'system');
     renderStats();
+    await initStoryQuest();
   }
 
   async function restoreEquippedBonuses() {
@@ -98,6 +100,66 @@ const Game = (() => {
 
     equippedBonuses.atk = items.reduce((sum, i) => sum + (i.atk_bonus || 0), 0);
     equippedBonuses.def = items.reduce((sum, i) => sum + (i.def_bonus || 0), 0);
+  }
+
+  // ── 스토리 퀘스트 ─────────────────────────────────────────
+
+  async function initStoryQuest() {
+    const progress = character.story_progress || 0;
+    if (progress === 0) {
+      log('[ 아르단 마을 ] 장로 에르난이 할 말이 있어 보인다.', 'story');
+    } else if (progress === 1) {
+      const { data: rows } = await supabaseClient
+        .from('text_mmorpg_character_quests')
+        .select('id, quest:quest_id(quest_category)')
+        .eq('character_id', character.id)
+        .eq('completed', false);
+      const hasMain = (rows || []).some(r => r.quest?.quest_category === 'main');
+      if (!hasMain) await assignMainQuest('평야의 이상 징후');
+    }
+  }
+
+  async function assignMainQuest(title) {
+    const { data: quest } = await supabaseClient
+      .from('text_mmorpg_quests')
+      .select('id')
+      .eq('title', title)
+      .single();
+    if (!quest) return;
+    await supabaseClient
+      .from('text_mmorpg_character_quests')
+      .insert({ character_id: character.id, quest_id: quest.id, progress: 0, completed: false });
+  }
+
+  async function advanceStoryProgress() {
+    const next = (character.story_progress || 0) + 1;
+    await supabaseClient
+      .from('text_mmorpg_characters')
+      .update({ story_progress: next })
+      .eq('id', character.id);
+    character.story_progress = next;
+
+    if (next === 2) {
+      await assignMainQuest('봉인의 흔적');
+      log('[ 스토리 ] 새 퀘스트: 봉인의 흔적', 'story');
+    } else if (next === 3) {
+      await assignMainQuest('평야의 군주');
+      log('[ 스토리 ] 새 퀘스트: 평야의 군주', 'story');
+    } else if (next >= 4) {
+      log('[ 스토리 ] 1막 완료! 새로운 길이 열렸다.', 'story');
+    }
+  }
+
+  async function onNpcDialogueComplete(npcName) {
+    if (npcName === '장로 에르난' && (character.story_progress || 0) === 0) {
+      await supabaseClient
+        .from('text_mmorpg_characters')
+        .update({ story_progress: 1 })
+        .eq('id', character.id);
+      character.story_progress = 1;
+      await assignMainQuest('평야의 이상 징후');
+      log('[ 스토리 ] 퀘스트 수락: 평야의 이상 징후', 'story');
+    }
   }
 
   function renderStats() {
@@ -265,6 +327,26 @@ const Game = (() => {
           .eq('id', cq.id);
         log(`퀘스트 완료: ${cq.quest.title}! 게시판에서 보상을 수령하세요.`, 'item');
       }
+
+      // 메인 탐험 퀘스트 처리
+      const { data: mainExploreRows } = await supabaseClient
+        .from('text_mmorpg_character_quests')
+        .select('id, quest:quest_id(title, type, target_name, quest_category)')
+        .eq('character_id', character.id)
+        .eq('completed', false);
+      const mainExploreMatch = (mainExploreRows || []).filter(r =>
+        r.quest?.quest_category === 'main' &&
+        r.quest?.type === 'explore' &&
+        r.quest?.target_name === zone.name
+      );
+      for (const cq of mainExploreMatch) {
+        await supabaseClient
+          .from('text_mmorpg_character_quests')
+          .update({ progress: 1, completed: true, completed_at: new Date().toISOString() })
+          .eq('id', cq.id);
+        log(`[ 스토리 ] 퀘스트 완료: ${cq.quest.title}`, 'story');
+        await advanceStoryProgress();
+      }
     }
 
     const panel   = document.getElementById('zone-actions');
@@ -327,12 +409,32 @@ const Game = (() => {
 
       if (bosses && bosses.length > 0) {
         const boss = bosses[0];
+
+        // 보스 main 퀘스트 완료 여부 확인
+        const { data: bossQRows } = await supabaseClient
+          .from('text_mmorpg_character_quests')
+          .select('completed, quest:quest_id(type, target_name, quest_category)')
+          .eq('character_id', character.id);
+        const bossQuestDone = (bossQRows || []).some(r =>
+          r.quest?.quest_category === 'main' &&
+          r.quest?.type === 'boss' &&
+          r.quest?.target_name === boss.name &&
+          r.completed
+        );
+
         const bossSection = document.createElement('div');
         bossSection.style.cssText = 'margin-top:8px; border-top:1px solid var(--border); padding-top:8px;';
-        bossSection.innerHTML = `
-          <div class="muted" style="font-size:0.75rem; margin-bottom:6px;">⚔ 강적</div>
-          <button class="btn btn-boss" style="width:100%;" onclick="Game.startBossChallenge(${boss.id})">[ 보스 도전: ${boss.name} ]</button>
-        `;
+        if (bossQuestDone) {
+          bossSection.innerHTML = `
+            <div class="muted" style="font-size:0.75rem; margin-bottom:6px;">⚔ 강적</div>
+            <div class="muted" style="font-size:0.85rem;">[ 처치 완료: ${boss.name} ]</div>
+          `;
+        } else {
+          bossSection.innerHTML = `
+            <div class="muted" style="font-size:0.75rem; margin-bottom:6px;">⚔ 강적</div>
+            <button class="btn btn-boss" style="width:100%;" onclick="Game.startBossChallenge(${boss.id})">[ 보스 도전: ${boss.name} ]</button>
+          `;
+        }
         btnWrap.appendChild(bossSection);
       }
     }
@@ -522,6 +624,54 @@ const Game = (() => {
           log(`퀘스트 완료: ${cq.quest.title}! 게시판에서 보상을 수령하세요.`, 'item');
         } else {
           log(`퀘스트 진행: ${cq.quest.title} (${newProgress}/${cq.quest.target_count})`, 'system');
+        }
+      }
+
+      // 메인 퀘스트 진행 업데이트
+      const { data: mainQuestRows } = await supabaseClient
+        .from('text_mmorpg_character_quests')
+        .select('id, progress, quest:quest_id(title, type, target_name, target_count, quest_category)')
+        .eq('character_id', character.id)
+        .eq('completed', false);
+
+      // 메인 monster 퀘스트
+      const mainMonsterMatch = (mainQuestRows || []).filter(r =>
+        r.quest?.quest_category === 'main' &&
+        r.quest?.type === 'monster' &&
+        r.quest?.target_name === monster.name
+      );
+      for (const cq of mainMonsterMatch) {
+        const newProgress = (cq.progress || 0) + 1;
+        const isDone = newProgress >= cq.quest.target_count;
+        await supabaseClient
+          .from('text_mmorpg_character_quests')
+          .update({
+            progress: newProgress,
+            completed: isDone,
+            ...(isDone ? { completed_at: new Date().toISOString() } : {}),
+          })
+          .eq('id', cq.id);
+        if (isDone) {
+          log(`[ 스토리 ] 퀘스트 완료: ${cq.quest.title}`, 'story');
+          await advanceStoryProgress();
+        } else {
+          log(`[ 스토리 ] ${cq.quest.title} (${newProgress}/${cq.quest.target_count})`, 'story');
+        }
+      }
+
+      // 메인 boss 퀘스트
+      if (monster.isBoss) {
+        const mainBossMatch = (mainQuestRows || []).filter(r =>
+          r.quest?.quest_category === 'main' &&
+          r.quest?.type === 'boss' &&
+          r.quest?.target_name === monster.name
+        );
+        for (const cq of mainBossMatch) {
+          await supabaseClient
+            .from('text_mmorpg_character_quests')
+            .update({ progress: 1, completed: true, completed_at: new Date().toISOString() })
+            .eq('id', cq.id);
+          await advanceStoryProgress();
         }
       }
 
@@ -1020,10 +1170,29 @@ const Game = (() => {
 
   // ── 마을 시설 ──────────────────────────────────────────────
 
-  function openVillageModal() {
+  async function openVillageModal() {
     const overlay = document.getElementById('village-modal-overlay');
     const content = document.getElementById('village-modal-content');
-    content.innerHTML = `
+
+    // 진행 중인 메인 퀘스트 조회
+    let storyHtml = '';
+    const { data: mainQRows } = await supabaseClient
+      .from('text_mmorpg_character_quests')
+      .select('progress, quest:quest_id(title, target_count, quest_category)')
+      .eq('character_id', character.id)
+      .eq('completed', false);
+    const activeMain = (mainQRows || []).find(r => r.quest?.quest_category === 'main');
+    if (activeMain) {
+      storyHtml = `
+        <div style="margin-bottom:12px; padding:8px; border:1px solid var(--amber-dim); font-size:0.85rem;">
+          <div class="amber" style="margin-bottom:4px;">[ 스토리 ]</div>
+          <div>${activeMain.quest.title}</div>
+          <div class="muted">진행: ${activeMain.progress}/${activeMain.quest.target_count}</div>
+        </div>
+      `;
+    }
+
+    content.innerHTML = storyHtml + `
       <button class="btn" onclick="Game.closeVillageModal(); Game.openNpcDialogue('장로 에르난')"
         style="width:100%; margin-bottom:8px;">[ 장로 에르난에게 말 걸기 ]</button>
       <button class="btn" onclick="Game.closeVillageModal(); Game.openShopModal()"
@@ -1185,6 +1354,7 @@ const Game = (() => {
 
     _npcDialogues = dialogues;
     _npcIndex = 0;
+    _currentNpcName = npcName;
 
     const overlay = document.getElementById('npc-modal-overlay');
     overlay.style.display = 'flex';
@@ -1221,7 +1391,7 @@ const Game = (() => {
     }, 25);
   }
 
-  function npcNext() {
+  async function npcNext() {
     if (_npcTyping) {
       if (_npcTypingTimer) { clearInterval(_npcTypingTimer); _npcTypingTimer = null; }
       _npcTyping = false;
@@ -1234,6 +1404,7 @@ const Game = (() => {
     if (_npcIndex < _npcDialogues.length) {
       showNpcLine();
     } else {
+      await onNpcDialogueComplete(_currentNpcName);
       closeNpcDialogue();
     }
   }
@@ -1244,6 +1415,7 @@ const Game = (() => {
     _npcDialogues = [];
     _npcIndex = 0;
     _npcTyping = false;
+    _currentNpcName = null;
     if (_npcTypingTimer) { clearInterval(_npcTypingTimer); _npcTypingTimer = null; }
   }
 
