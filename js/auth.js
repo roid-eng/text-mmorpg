@@ -27,11 +27,28 @@ const Auth = (() => {
     return data;
   }
 
+  async function signInAsGuest() {
+    const { data, error } = await supabaseClient.auth.signInAnonymously();
+    if (error) return { error };
+
+    const user = data.user;
+    await supabaseClient
+      .from('text_mmorpg_players')
+      .upsert({
+        id: user.id,
+        username: '여행자_' + user.id.slice(0, 6),
+        language: 'ko',
+        is_guest: true,
+      }, { onConflict: 'id', ignoreDuplicates: true });
+
+    return { data };
+  }
+
   async function signOut() {
     const { error } = await supabaseClient.auth.signOut();
     if (error) throw error;
     window.location.reload();
   }
 
-  return { getSession, signUp, signIn, signOut };
+  return { getSession, signUp, signIn, signOut, signInAsGuest };
 })();

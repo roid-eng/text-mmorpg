@@ -24,6 +24,20 @@ async function handleLogin() {
   }
 }
 
+window.startAsGuest = async function() {
+  const btn = document.querySelector('[onclick="startAsGuest()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '[ 접속 중... ]'; }
+
+  const { data, error } = await Auth.signInAsGuest();
+  if (error) {
+    const errEl = document.getElementById('login-error');
+    if (errEl) errEl.textContent = '게스트 접속에 실패했습니다.';
+    if (btn) { btn.disabled = false; btn.textContent = '[ 게스트로 시작 ]'; }
+    return;
+  }
+  location.reload();
+};
+
 async function handleSignup() {
   const username = document.getElementById('signup-username').value.trim();
   const email    = document.getElementById('signup-email').value.trim();

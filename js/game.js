@@ -57,6 +57,7 @@ const Game = (() => {
   let _currentNpcName = null;
   let _questOfferShown = false;
   let _questOfferActive = false;
+  let _isGuest = false;
 
   function log(text, type = '') {
     if (!logEl) return;
@@ -73,6 +74,11 @@ const Game = (() => {
     log('━━━━━━━━━━━━━━━━━━━━━━━━', 'system');
   }
 
+  function checkGuestLevelAlert() {
+    storyLog('여행자여, 이메일을 연동하면 진행 상황이 영구 저장됩니다.');
+    storyLog('[ 설정 ] 메뉴에서 계정을 연동할 수 있습니다.');
+  }
+
   async function start(char) {
     character = char;
     logEl = document.getElementById('game-log');
@@ -84,6 +90,17 @@ const Game = (() => {
       character = { ...character, hp: updatedChar.hp, mp: updatedChar.mp };
       renderStats();
     });
+
+    // 게스트 여부 로드
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session?.user) {
+      const { data: playerRow } = await supabaseClient
+        .from('text_mmorpg_players')
+        .select('is_guest')
+        .eq('id', session.user.id)
+        .single();
+      _isGuest = playerRow?.is_guest || false;
+    }
 
     log(`Mytharion에 오신 것을 환영합니다, ${character.name}.`, 'story');
     log(`직업: ${character.class}  |  레벨: ${character.level}`, 'system');
@@ -614,6 +631,7 @@ const Game = (() => {
       if (character.exp >= expNeeded) {
         character = Character.levelUpStats(character);
         log(`레벨 업! → Lv.${character.level}`, 'levelup');
+        if (_isGuest && character.level === 5) checkGuestLevelAlert();
       }
       await Character.save(character);
 
@@ -1341,6 +1359,7 @@ const Game = (() => {
     if (character.exp >= expNeeded) {
       character = Character.levelUpStats(character);
       log(`레벨 업! → Lv.${character.level}`, 'levelup');
+      if (_isGuest && character.level === 5) checkGuestLevelAlert();
     }
     await Character.save(character);
     renderStats();
