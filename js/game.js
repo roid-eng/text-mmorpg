@@ -65,6 +65,12 @@ const Game = (() => {
     logEl.scrollTop = logEl.scrollHeight;
   }
 
+  function storyLog(text) {
+    log('━━━━━━━━━━━━━━━━━━━━━━━━', 'system');
+    log(`[ 스토리 ] ${text}`, 'amber');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━', 'system');
+  }
+
   async function start(char) {
     character = char;
     logEl = document.getElementById('game-log');
@@ -80,7 +86,6 @@ const Game = (() => {
     log(`Mytharion에 오신 것을 환영합니다, ${character.name}.`, 'story');
     log(`직업: ${character.class}  |  레벨: ${character.level}`, 'system');
     renderStats();
-    await initStoryQuest();
   }
 
   async function restoreEquippedBonuses() {
@@ -106,8 +111,9 @@ const Game = (() => {
 
   async function initStoryQuest() {
     const progress = character.story_progress || 0;
+    const inVillage = parseInt(character.zone_id) === 6;
     if (progress === 0) {
-      log('[ 아르단 마을 ] 장로 에르난이 할 말이 있어 보인다.', 'story');
+      if (inVillage) storyLog('장로 에르난이 할 말이 있어 보인다.');
     } else if (progress === 1) {
       const { data: rows } = await supabaseClient
         .from('text_mmorpg_character_quests')
@@ -141,12 +147,12 @@ const Game = (() => {
 
     if (next === 2) {
       await assignMainQuest('봉인의 흔적');
-      log('[ 스토리 ] 새 퀘스트: 봉인의 흔적', 'story');
+      storyLog('새 퀘스트: 봉인의 흔적');
     } else if (next === 3) {
       await assignMainQuest('평야의 군주');
-      log('[ 스토리 ] 새 퀘스트: 평야의 군주', 'story');
+      storyLog('새 퀘스트: 평야의 군주');
     } else if (next >= 4) {
-      log('[ 스토리 ] 1막 완료! 새로운 길이 열렸다.', 'story');
+      storyLog('1막 완료! 새로운 길이 열렸다.');
     }
   }
 
@@ -158,7 +164,7 @@ const Game = (() => {
         .eq('id', character.id);
       character.story_progress = 1;
       await assignMainQuest('평야의 이상 징후');
-      log('[ 스토리 ] 퀘스트 수락: 평야의 이상 징후', 'story');
+      storyLog('퀘스트 수락: 평야의 이상 징후');
     }
   }
 
@@ -306,6 +312,7 @@ const Game = (() => {
         log(`레벨 권장: ${zone.level_min}~${zone.level_max}`, 'system');
       }
       currentZoneId = zoneId;
+      await initStoryQuest();
     }
 
     // 탐험 퀘스트 진행 업데이트
@@ -344,7 +351,7 @@ const Game = (() => {
           .from('text_mmorpg_character_quests')
           .update({ progress: 1, completed: true, completed_at: new Date().toISOString() })
           .eq('id', cq.id);
-        log(`[ 스토리 ] 퀘스트 완료: ${cq.quest.title}`, 'story');
+        storyLog(`퀘스트 완료: ${cq.quest.title}`);
         await advanceStoryProgress();
       }
     }
@@ -652,10 +659,10 @@ const Game = (() => {
           })
           .eq('id', cq.id);
         if (isDone) {
-          log(`[ 스토리 ] 퀘스트 완료: ${cq.quest.title}`, 'story');
+          storyLog(`퀘스트 완료: ${cq.quest.title}`);
           await advanceStoryProgress();
         } else {
-          log(`[ 스토리 ] ${cq.quest.title} (${newProgress}/${cq.quest.target_count})`, 'story');
+          log(`[ 스토리 ] ${cq.quest.title} (${newProgress}/${cq.quest.target_count})`, 'amber');
         }
       }
 
