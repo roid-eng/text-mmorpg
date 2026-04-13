@@ -45,6 +45,10 @@ const Game = (() => {
   let currentShopName = '상점';
   let equippedBonuses = { atk: 0, def: 0 };
   let restInterval = null;
+  let _npcDialogues = [];
+  let _npcIndex = 0;
+  let _npcTyping = false;
+  let _npcTypingTimer = null;
 
   function log(text, type = '') {
     if (!logEl) return;
@@ -312,6 +316,7 @@ const Game = (() => {
       villagePanel.innerHTML = `
         <div class="panel-title">[ 마을 시설 ]</div>
         <button class="btn" style="width:100%; margin-bottom:6px;" onclick="Game.openQuestModal()">[ 퀘스트 게시판 ]</button>
+        <button class="btn" style="width:100%; margin-bottom:6px;" onclick="Game.openNpcDialogue('장로 에르난')">[ 장로 에르난에게 말 걸기 ]</button>
       `;
       panel.appendChild(villagePanel);
     }
@@ -1103,5 +1108,95 @@ const Game = (() => {
     log(`퀘스트 완료! EXP +${rewardExp}, Gold +${rewardGold} 획득.`, 'item');
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, claimQuestReward };
+  // ── NPC 대화 ──────────────────────────────────────────────
+
+  async function openNpcDialogue(npcName) {
+    const { data: npc } = await supabaseClient
+      .from('text_mmorpg_npcs')
+      .select('id')
+      .eq('name', npcName)
+      .eq('is_active', true)
+      .single();
+
+    if (!npc) { log(`${npcName}: 대화를 나눌 수 없습니다.`, 'system'); return; }
+
+    const { data: dialogues } = await supabaseClient
+      .from('text_mmorpg_npc_dialogues')
+      .select('*')
+      .eq('npc_id', npc.id)
+      .order('sequence', { ascending: true });
+
+    if (!dialogues || dialogues.length === 0) {
+      log(`${npcName}: ...`, 'system'); return;
+    }
+
+    _npcDialogues = dialogues;
+    _npcIndex = 0;
+
+    const overlay = document.getElementById('npc-modal-overlay');
+    overlay.style.display = 'flex';
+    overlay.onclick = (e) => { if (e.target === overlay) npcNext(); };
+
+    document.addEventListener('keydown', npcKeyHandler);
+    showNpcLine();
+  }
+
+  function showNpcLine() {
+    const line = _npcDialogues[_npcIndex];
+    if (!line) return;
+
+    document.getElementById('npc-name').textContent = `[ ${line.speaker} ]`;
+
+    const dialogueEl = document.getElementById('npc-dialogue');
+    dialogueEl.innerHTML = '';
+
+    let i = 0;
+    _npcTyping = true;
+
+    if (_npcTypingTimer) clearInterval(_npcTypingTimer);
+
+    _npcTypingTimer = setInterval(() => {
+      dialogueEl.innerHTML =
+        line.text.slice(0, i + 1) + '<span class="npc-cursor">▌</span>';
+      i++;
+      if (i >= line.text.length) {
+        clearInterval(_npcTypingTimer);
+        _npcTypingTimer = null;
+        _npcTyping = false;
+        dialogueEl.innerHTML = line.text;
+      }
+    }, 25);
+  }
+
+  function npcNext() {
+    if (_npcTyping) {
+      if (_npcTypingTimer) { clearInterval(_npcTypingTimer); _npcTypingTimer = null; }
+      _npcTyping = false;
+      const line = _npcDialogues[_npcIndex];
+      if (line) document.getElementById('npc-dialogue').innerHTML = line.text;
+      return;
+    }
+
+    _npcIndex++;
+    if (_npcIndex < _npcDialogues.length) {
+      showNpcLine();
+    } else {
+      closeNpcDialogue();
+    }
+  }
+
+  function closeNpcDialogue() {
+    document.getElementById('npc-modal-overlay').style.display = 'none';
+    document.removeEventListener('keydown', npcKeyHandler);
+    _npcDialogues = [];
+    _npcIndex = 0;
+    _npcTyping = false;
+    if (_npcTypingTimer) { clearInterval(_npcTypingTimer); _npcTypingTimer = null; }
+  }
+
+  function npcKeyHandler(e) {
+    if (e.key === 'Enter') npcNext();
+  }
+
+  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, claimQuestReward, openNpcDialogue, npcNext, closeNpcDialogue };
 })();

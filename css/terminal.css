@@ -360,6 +360,15 @@
   }
 }
 
+/* ------------------------------------------------------------
+   NPC dialogue typing cursor
+   ------------------------------------------------------------ */
+.npc-cursor {
+  display: inline-block;
+  animation: blink 0.7s infinite;
+  color: var(--amber);
+}
+
 /* 노드 맵 캔버스 */
 #node-map {
   display: block;
