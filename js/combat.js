@@ -399,6 +399,14 @@ const Combat = (() => {
   async function monsterTurn() {
     if (!state || !state.active) return;
 
+    // Boss rage phase
+    if (state.monster.isBoss && !state.monster.isEnraged &&
+        state.monster.hp <= state.monster.hpMax * 0.3) {
+      state.monster.isEnraged = true;
+      state.monster.atk = Math.floor(state.monster.atk * 1.5);
+      combatLog(`⚠ ${state.monster.name}이(가) 분노했다! 공격력이 증가한다!`, 'danger');
+    }
+
     const rawDmg = calcMonsterDmg(state.monster, state.character);
 
     if (rawDmg === null) {

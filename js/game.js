@@ -25,7 +25,12 @@ const MONSTER_ASCII = {
   '독버섯 포자': `  _*_\n (* *)\n /| |\\`,
   '오크 전사':   `  /\\\n (>o<)\n [|||]\n /   \\`,
   '좀비':        `  /\\\n (~_~)\n /||\\\ \n /  \\`,
-  '해골':        `  ___\n (x x)\n  \\|/\n  / \\`
+  '해골':        `  ___\n (x x)\n  \\|/\n  / \\`,
+  '광폭화된 평야의 군주': `  ^(  )^\n /[oo] \\\n(||||||||)\n  \\  /`,
+  '타락한 숲의 수호자':   `.(~~~).\n( O   O )\n \\  ^  /\n  |||||`,
+  '이그나르의 파편':      ` /\\/\\\n(🔥🔥🔥)\n /\\/\\/\\`,
+  '고성의 군주':          ` [===]\n (X X)\n /|||\\\n /   \\`,
+  '봉인된 신의 화신':     `✦ /\\ ✦\n( >.<)\n✦ \\/ ✦\n |||||`
 };
 window.MONSTER_ASCII = MONSTER_ASCII;
 
@@ -312,6 +317,26 @@ const Game = (() => {
       panel.appendChild(villagePanel);
     }
 
+    // 보스 도전 버튼 (비마을 지역)
+    if (!isVillage) {
+      const { data: bosses } = await supabaseClient
+        .from('text_mmorpg_monsters')
+        .select('id, name')
+        .eq('zone_id', zoneId)
+        .eq('is_boss', true);
+
+      if (bosses && bosses.length > 0) {
+        const boss = bosses[0];
+        const bossSection = document.createElement('div');
+        bossSection.style.cssText = 'margin-top:8px; border-top:1px solid var(--border); padding-top:8px;';
+        bossSection.innerHTML = `
+          <div class="muted" style="font-size:0.75rem; margin-bottom:6px;">⚔ 강적</div>
+          <button class="btn btn-boss" style="width:100%;" onclick="Game.startBossChallenge(${boss.id})">[ 보스 도전: ${boss.name} ]</button>
+        `;
+        btnWrap.appendChild(bossSection);
+      }
+    }
+
     panel.style.display = 'block';
     renderNodeMap(zoneId, zone.name, connections);
   }
@@ -359,7 +384,8 @@ const Game = (() => {
     const { data: monsters, error } = await supabaseClient
       .from('text_mmorpg_monsters')
       .select('*')
-      .eq('zone_id', zoneId);
+      .eq('zone_id', zoneId)
+      .eq('is_boss', false);
     if (error || !monsters || monsters.length === 0) return;
 
     // 선공 몬스터 — 30% 확률 조우
@@ -413,12 +439,15 @@ const Game = (() => {
       description: m.description || `${m.name}과 마주쳤다.`,
       hp:          m.hp,
       hp_max:      m.hp,
+      hpMax:       m.hp,
       atk:         m.atk,
       def:         m.def,
       stat_con:    m.stat_con || 0,
       expReward:   m.exp,
       goldReward:  m.gold_reward || 0,
       level:       m.level || 1,
+      isBoss:      m.is_boss || false,
+      isEnraged:   false,
       loot:        null,
     };
   }
@@ -976,6 +1005,19 @@ const Game = (() => {
     loadSellItems();
   }
 
+  // ── 보스 전투 ──────────────────────────────────────────────
+
+  async function startBossChallenge(bossId) {
+    const { data: boss } = await supabaseClient
+      .from('text_mmorpg_monsters')
+      .select('*')
+      .eq('id', bossId)
+      .single();
+    if (!boss) { log('보스 정보를 불러올 수 없습니다.', 'system'); return; }
+    log('⚠ 강적과의 전투가 시작됩니다. 신중하게 싸우십시오.', 'combat');
+    startCombat(boss);
+  }
+
   // ── 마을 시설 ──────────────────────────────────────────────
 
   function openVillageModal() {
@@ -1209,5 +1251,5 @@ const Game = (() => {
     if (e.key === 'Enter') npcNext();
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, claimQuestReward, openNpcDialogue, npcNext, closeNpcDialogue, openVillageModal, closeVillageModal };
+  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, claimQuestReward, openNpcDialogue, npcNext, closeNpcDialogue, openVillageModal, closeVillageModal, startBossChallenge };
 })();

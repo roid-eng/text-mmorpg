@@ -361,6 +361,19 @@
 }
 
 /* ------------------------------------------------------------
+   Boss challenge button
+   ------------------------------------------------------------ */
+.btn-boss {
+  border-color: #f44336 !important;
+  color: #f44336 !important;
+}
+.btn-boss:hover {
+  background: rgba(244, 67, 54, 0.1) !important;
+}
+
+.log-line-danger { color: #f44336; font-weight: bold; }
+
+/* ------------------------------------------------------------
    NPC dialogue typing cursor
    ------------------------------------------------------------ */
 .npc-cursor {
