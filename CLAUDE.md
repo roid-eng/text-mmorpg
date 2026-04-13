@@ -53,6 +53,32 @@
 
 ---
 
+## NPC 대사 관리 원칙
+
+### 기본 규칙
+- 모든 NPC 대사는 text_mmorpg_npc_dialogues 테이블에서 관리
+- 코드에 대사 하드코딩 금지
+- 대사 추가/수정 시 SQL 마이그레이션 파일로 관리
+
+### dialogue_type 분류
+- `default`: 첫 대화 (기본 스토리 대사)
+- `quest_offer`: 퀘스트 제안 대사 (progress=0, 재대화)
+- `in_progress_1~N`: 퀘스트 진행 중 재대화 (story_progress별)
+- `completed`: 해당 막 완료 후 대화
+
+### 대사 추가 방법
+새 NPC 또는 대사 추가 시:
+1. `migrations/NNN_npc_dialogue_추가내용.sql` 파일 생성
+2. `INSERT INTO text_mmorpg_npc_dialogues` 실행
+3. SQL Editor에서 실행 후 커밋
+
+### 추후 에이전트 연동
+- Max 플랜 전환 후 콘텐츠 라이터 에이전트가
+  NPC 대사를 생성하여 DB에 직접 삽입
+- 코드 수정 없이 콘텐츠 확장 가능
+
+---
+
 ## UI 방향 (Text Studio)
 - 배경: #0a0c0f
 - 포인트 컬러: #e8a020 (앰버)

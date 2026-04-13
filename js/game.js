@@ -1356,9 +1356,10 @@ const Game = (() => {
     if (npcName === '장로 에르난') {
       const progress = character.story_progress || 0;
       if (progress === 0) {
+        // 첫 대화: default, 퀘스트 오퍼를 한 번 본 후 재대화: quest_offer
         dialogueType = _questOfferShown ? 'quest_offer' : 'default';
       } else if (progress === 1) {
-        dialogueType = _questOfferShown ? 'in_progress_1' : 'default';
+        dialogueType = 'in_progress_1';
       } else if (progress === 2) {
         dialogueType = 'in_progress_2';
       } else if (progress === 3) {
@@ -1433,8 +1434,7 @@ const Game = (() => {
     } else {
       const progress = character.story_progress || 0;
       const needsOffer =
-        _currentNpcName === '장로 에르난' &&
-        (progress === 0 || (progress === 1 && !_questOfferShown));
+        _currentNpcName === '장로 에르난' && progress === 0;
       if (needsOffer) {
         await showQuestOffer();
       } else {
