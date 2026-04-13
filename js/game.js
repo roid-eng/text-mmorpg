@@ -55,6 +55,8 @@ const Game = (() => {
   let _npcTyping = false;
   let _npcTypingTimer = null;
   let _currentNpcName = null;
+  let _questOfferShown = false;
+  let _questOfferActive = false;
 
   function log(text, type = '') {
     if (!logEl) return;
@@ -1359,7 +1361,12 @@ const Game = (() => {
       log(`${npcName}: ...`, 'system'); return;
     }
 
-    _npcDialogues = dialogues;
+    // 에르난 재대화: 기본 대사를 이미 본 경우 퀘스트 대사(seq 7~)부터 시작
+    if (npcName === '장로 에르난' && (character.story_progress || 0) === 0 && _questOfferShown) {
+      _npcDialogues = dialogues.filter(d => d.sequence >= 7);
+    } else {
+      _npcDialogues = dialogues;
+    }
     _npcIndex = 0;
     _currentNpcName = npcName;
 
@@ -1410,25 +1417,88 @@ const Game = (() => {
     _npcIndex++;
     if (_npcIndex < _npcDialogues.length) {
       showNpcLine();
+    } else if (_currentNpcName === '장로 에르난' && (character.story_progress || 0) === 0) {
+      await showQuestOffer();
     } else {
       await onNpcDialogueComplete(_currentNpcName);
       closeNpcDialogue();
     }
   }
 
+  async function showQuestOffer() {
+    const { data: quest } = await supabaseClient
+      .from('text_mmorpg_quests')
+      .select('title, reward_exp, reward_gold')
+      .eq('title', '평야의 이상 징후')
+      .single();
+
+    const title      = quest?.title      || '평야의 이상 징후';
+    const rewardExp  = quest?.reward_exp  || 150;
+    const rewardGold = quest?.reward_gold || 80;
+
+    document.getElementById('npc-dialogue').innerHTML = `
+      <div style="margin-bottom:8px; color:var(--amber);">[ 의뢰 ]</div>
+      <div style="margin-bottom:4px;">${title}</div>
+      <div class="muted" style="font-size:0.8rem;">
+        보상: EXP ${rewardExp} / Gold ${rewardGold}
+      </div>
+    `;
+
+    const nextBtn = document.getElementById('npc-next-btn');
+    if (nextBtn) nextBtn.style.display = 'none';
+
+    const btnArea = document.querySelector('#npc-modal .btn-area');
+    if (btnArea) {
+      btnArea.innerHTML = `
+        <span></span>
+        <div>
+          <button class="btn" style="margin-right:8px;" onclick="Game.acceptQuest()">[ 수락 ]</button>
+          <button class="btn" style="opacity:0.6;" onclick="Game.declineQuest()">[ 거절 ]</button>
+        </div>
+      `;
+    }
+
+    _questOfferShown = true;
+    _questOfferActive = true;
+  }
+
+  async function acceptQuest() {
+    await onNpcDialogueComplete(_currentNpcName);
+    log('퀘스트를 수락했습니다.', 'amber');
+    _questOfferActive = false;
+    closeNpcDialogue();
+  }
+
+  function declineQuest() {
+    _questOfferActive = false;
+    closeNpcDialogue();
+    log('의뢰를 거절했습니다. 에르난에게 다시 말을 걸면 수락할 수 있습니다.', 'muted');
+  }
+
   function closeNpcDialogue() {
     document.getElementById('npc-modal-overlay').style.display = 'none';
     document.removeEventListener('keydown', npcKeyHandler);
+
+    // btn-area 원래 상태로 복원
+    const btnArea = document.querySelector('#npc-modal .btn-area');
+    if (btnArea) {
+      btnArea.innerHTML = `
+        <span class="muted" style="font-size:0.75rem;">[ 클릭 또는 ENTER로 계속 ]</span>
+        <button id="npc-next-btn" class="btn" style="padding:6px 16px;" onclick="Game.npcNext()">[ 다음 ▶ ]</button>
+      `;
+    }
+
     _npcDialogues = [];
     _npcIndex = 0;
     _npcTyping = false;
     _currentNpcName = null;
+    _questOfferActive = false;
     if (_npcTypingTimer) { clearInterval(_npcTypingTimer); _npcTypingTimer = null; }
   }
 
   function npcKeyHandler(e) {
-    if (e.key === 'Enter') npcNext();
+    if (e.key === 'Enter' && !_questOfferActive) npcNext();
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, claimQuestReward, openNpcDialogue, npcNext, closeNpcDialogue, openVillageModal, closeVillageModal, startBossChallenge };
+  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, claimQuestReward, openNpcDialogue, npcNext, closeNpcDialogue, openVillageModal, closeVillageModal, startBossChallenge, acceptQuest, declineQuest };
 })();
