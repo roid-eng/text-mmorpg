@@ -51,11 +51,20 @@ const Combat = (() => {
     const overlay = document.getElementById('combat-modal-overlay');
     const nameEl  = document.getElementById('combat-monster-name');
     const logEl   = document.getElementById('combat-log');
-    const asciiEl = document.getElementById('combat-monster-ascii');
+    const svgEl = document.getElementById('combat-monster-ascii');
     if (overlay) overlay.style.display = 'flex';
     if (nameEl)  nameEl.textContent  = state.monster.name;
     if (logEl)   logEl.innerHTML     = '';
-    if (asciiEl) asciiEl.textContent = window.MONSTER_ASCII?.[state.monster.name] || '';
+    if (svgEl) {
+      if (state.monster.svgSilhouette) {
+        svgEl.innerHTML = state.monster.svgSilhouette;
+        svgEl.style.textAlign = 'center';
+        svgEl.style.display = 'block';
+        svgEl.style.margin = '0 auto 12px';
+      } else {
+        svgEl.innerHTML = '';
+      }
+    }
     updateMonsterHp();
   }
 

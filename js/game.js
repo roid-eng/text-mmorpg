@@ -573,20 +573,21 @@ const Game = (() => {
 
   function mapMonster(m) {
     return {
-      name:        m.name,
-      description: m.description || `${m.name}과 마주쳤다.`,
-      hp:          m.hp,
-      hp_max:      m.hp,
-      hpMax:       m.hp,
-      atk:         m.atk,
-      def:         m.def,
-      stat_con:    m.stat_con || 0,
-      expReward:   m.exp,
-      goldReward:  m.gold_reward || 0,
-      level:       m.level || 1,
-      isBoss:      m.is_boss || false,
-      isEnraged:   false,
-      loot:        null,
+      name:         m.name,
+      description:  m.description || `${m.name}과 마주쳤다.`,
+      hp:           m.hp,
+      hp_max:       m.hp,
+      hpMax:        m.hp,
+      atk:          m.atk,
+      def:          m.def,
+      stat_con:     m.stat_con || 0,
+      expReward:    m.exp,
+      goldReward:   m.gold_reward || 0,
+      level:        m.level || 1,
+      isBoss:       m.is_boss || false,
+      isEnraged:    false,
+      loot:         null,
+      svgSilhouette: m.svg_silhouette || null,
     };
   }
 
