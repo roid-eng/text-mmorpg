@@ -190,8 +190,16 @@ const Game = (() => {
     } else if (next === 3) {
       await assignMainQuest('평야의 군주');
       storyLog('새 퀘스트: 평야의 군주');
-    } else if (next >= 4) {
+    } else if (next === 4) {
       storyLog('1막 완료! 새로운 길이 열렸다.');
+    } else if (next === 6) {
+      await assignMainQuest('봉인석의 위치');
+      storyLog('새 퀘스트: 봉인석의 위치');
+    } else if (next === 7) {
+      await assignMainQuest('숲의 수호자');
+      storyLog('새 퀘스트: 숲의 수호자');
+    } else if (next >= 8) {
+      storyLog('2막 완료! 이그나르를 향한 길이 열렸다.');
     }
   }
 
@@ -204,6 +212,14 @@ const Game = (() => {
       character.story_progress = 1;
       await assignMainQuest('평야의 이상 징후');
       storyLog('퀘스트 수락: 평야의 이상 징후');
+    } else if (npcName === '숲의 현자 실바' && (character.story_progress || 0) === 4) {
+      await supabaseClient
+        .from('text_mmorpg_characters')
+        .update({ story_progress: 5 })
+        .eq('id', character.id);
+      character.story_progress = 5;
+      await assignMainQuest('숲의 이상');
+      storyLog('퀘스트 수락: 숲의 이상');
     }
   }
 
@@ -498,6 +514,17 @@ const Game = (() => {
           `;
         }
         btnWrap.appendChild(bossSection);
+      }
+
+      // 실바란 고목숲(zone_id=2) NPC 버튼 (story_progress >= 4)
+      if (zoneId === 2 && (character.story_progress || 0) >= 4) {
+        const npcSection = document.createElement('div');
+        npcSection.style.cssText = 'margin-top:8px; border-top:1px solid var(--border); padding-top:8px;';
+        npcSection.innerHTML = `
+          <div class="muted" style="font-size:0.75rem; margin-bottom:6px;">[ NPC ]</div>
+          <button class="btn" style="width:100%;" onclick="Game.openNpcDialogue('숲의 현자 실바')">[ 숲의 현자 실바에게 말 걸기 ]</button>
+        `;
+        btnWrap.appendChild(npcSection);
       }
     }
 
@@ -1571,6 +1598,19 @@ const Game = (() => {
       } else {
         dialogueType = 'completed';
       }
+    } else if (npcName === '숲의 현자 실바') {
+      const progress = character.story_progress || 0;
+      if (progress === 4) {
+        dialogueType = _questOfferShown ? 'quest_offer' : 'default';
+      } else if (progress === 5) {
+        dialogueType = 'in_progress_1';
+      } else if (progress === 6) {
+        dialogueType = 'in_progress_2';
+      } else if (progress === 7) {
+        dialogueType = 'in_progress_3';
+      } else {
+        dialogueType = 'completed';
+      }
     }
 
     const { data: dialogues } = await supabaseClient
@@ -1638,7 +1678,8 @@ const Game = (() => {
     } else {
       const progress = character.story_progress || 0;
       const needsOffer =
-        _currentNpcName === '장로 에르난' && progress === 0;
+        (_currentNpcName === '장로 에르난' && progress === 0) ||
+        (_currentNpcName === '숲의 현자 실바' && progress === 4 && !_questOfferShown);
       if (needsOffer) {
         await showQuestOffer();
       } else {
@@ -1649,13 +1690,14 @@ const Game = (() => {
   }
 
   async function showQuestOffer() {
+    const questTitle = _currentNpcName === '숲의 현자 실바' ? '숲의 이상' : '평야의 이상 징후';
     const { data: quest } = await supabaseClient
       .from('text_mmorpg_quests')
       .select('title, reward_exp, reward_gold')
-      .eq('title', '평야의 이상 징후')
+      .eq('title', questTitle)
       .single();
 
-    const title      = quest?.title      || '평야의 이상 징후';
+    const title      = quest?.title      || questTitle;
     const rewardExp  = quest?.reward_exp  || 150;
     const rewardGold = quest?.reward_gold || 80;
 
