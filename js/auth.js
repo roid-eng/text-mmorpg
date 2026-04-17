@@ -39,7 +39,7 @@ const Auth = (() => {
         username: '여행자_' + user.id.slice(0, 6),
         language: 'ko',
         is_guest: true,
-      }, { onConflict: 'id', ignoreDuplicates: true });
+      }, { onConflict: 'id' });
 
     return { data };
   }
