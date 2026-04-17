@@ -388,6 +388,26 @@
 }
 
 /* ------------------------------------------------------------
+   게스트 모드 배지
+   ------------------------------------------------------------ */
+.guest-badge {
+  display: inline-block;
+  color: #e8a020;
+  border: 1px solid #e8a020;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  padding: 2px 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.guest-badge:hover {
+  opacity: 1;
+  background: rgba(232, 160, 32, 0.08);
+}
+
+/* ------------------------------------------------------------
    전투 모달 SVG 실루엣
    ------------------------------------------------------------ */
 #combat-monster-ascii svg * {

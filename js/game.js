@@ -74,9 +74,11 @@ const Game = (() => {
     log('━━━━━━━━━━━━━━━━━━━━━━━━', 'system');
   }
 
-  function checkGuestLevelAlert() {
-    storyLog('여행자여, 이메일을 연동하면 진행 상황이 영구 저장됩니다.');
-    storyLog('[ 설정 ] 메뉴에서 계정을 연동할 수 있습니다.');
+  function _checkGuestLevelPopup() {
+    const flagKey = 'guest_link_shown_' + character.id;
+    if (localStorage.getItem(flagKey)) return;
+    localStorage.setItem(flagKey, '1');
+    openGuestLinkModal();
   }
 
   async function start(char) {
@@ -101,6 +103,21 @@ const Game = (() => {
         .single();
       _isGuest = playerRow?.is_guest || false;
     }
+
+    // 이메일 인증 완료 감지 → is_guest 자동 해제
+    supabaseClient.auth.onAuthStateChange(async (event, sess) => {
+      if (!_isGuest) return;
+      const user = sess?.user;
+      if (user?.email_confirmed_at) {
+        await supabaseClient
+          .from('text_mmorpg_players')
+          .update({ is_guest: false })
+          .eq('id', user.id);
+        _isGuest = false;
+        renderStats();
+        log('이메일 인증이 완료됐습니다. 계정이 정식 연동됐습니다.', 'amber');
+      }
+    });
 
     log(`Mytharion에 오신 것을 환영합니다, ${character.name}.`, 'story');
     log(`직업: ${character.class}  |  레벨: ${character.level}`, 'system');
@@ -195,6 +212,12 @@ const Game = (() => {
 
     const setText  = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
     const setWidth = (id, pct)  => { const el = document.getElementById(id); if (el) el.style.width = pct + '%'; };
+
+    // 게스트 배지
+    const guestBadge = document.getElementById('guest-badge');
+    if (guestBadge) guestBadge.style.display = _isGuest ? 'block' : 'none';
+    const mobileGuestBadge = document.getElementById('mobile-guest-badge');
+    if (mobileGuestBadge) mobileGuestBadge.style.display = _isGuest ? 'block' : 'none';
 
     // PC 스탯 패널
     setText('stat-name',  character.name);
@@ -632,7 +655,7 @@ const Game = (() => {
       if (character.exp >= expNeeded) {
         character = Character.levelUpStats(character);
         log(`레벨 업! → Lv.${character.level}`, 'levelup');
-        if (_isGuest && character.level === 5) checkGuestLevelAlert();
+        if (_isGuest && character.level === 5) _checkGuestLevelPopup();
       }
       await Character.save(character);
 
@@ -1360,7 +1383,7 @@ const Game = (() => {
     if (character.exp >= expNeeded) {
       character = Character.levelUpStats(character);
       log(`레벨 업! → Lv.${character.level}`, 'levelup');
-      if (_isGuest && character.level === 5) checkGuestLevelAlert();
+      if (_isGuest && character.level === 5) _checkGuestLevelPopup();
     }
     await Character.save(character);
     renderStats();
@@ -1549,5 +1572,83 @@ const Game = (() => {
     if (e.key === 'Enter' && !_questOfferActive) npcNext();
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, claimQuestReward, openNpcDialogue, npcNext, closeNpcDialogue, openVillageModal, closeVillageModal, startBossChallenge, acceptQuest, declineQuest };
+  // ── 게스트 이메일 연동 ────────────────────────────────────
+
+  function openGuestLinkModal() {
+    const overlay = document.getElementById('guest-link-modal-overlay');
+    if (!overlay) return;
+    const box = document.getElementById('guest-link-modal-box');
+    box.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <span class="amber" style="letter-spacing:2px;">[ 계정 연동 ]</span>
+        <button class="btn" onclick="Game.closeGuestLinkModal()" style="padding:2px 8px;">[ X ]</button>
+      </div>
+      <div class="muted" style="font-size:0.85rem; margin-bottom:16px; line-height:1.6;">
+        이메일을 연동하면 진행 상황이 영구 저장됩니다.<br>레벨업, 아이템, 퀘스트 진행이 모두 보존됩니다.
+      </div>
+      <div style="margin-bottom:10px;">
+        <label class="muted" style="font-size:0.8rem; display:block; margin-bottom:4px;">이메일</label>
+        <input id="guest-link-email" type="email" placeholder="example@email.com" style="width:100%; box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label class="muted" style="font-size:0.8rem; display:block; margin-bottom:4px;">비밀번호 (6자 이상)</label>
+        <input id="guest-link-password" type="password" placeholder="비밀번호" style="width:100%; box-sizing:border-box;">
+      </div>
+      <div id="guest-link-error" style="display:none; color:#f44336; font-size:0.8rem; margin-bottom:12px;"></div>
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button class="btn" onclick="Game.closeGuestLinkModal()" style="opacity:0.6;">[ 나중에 ]</button>
+        <button class="btn" id="guest-link-submit-btn" onclick="Game.submitGuestLink()">[ 연동하기 ]</button>
+      </div>
+    `;
+    overlay.style.display = 'flex';
+  }
+
+  function closeGuestLinkModal() {
+    const overlay = document.getElementById('guest-link-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  async function submitGuestLink() {
+    const emailEl    = document.getElementById('guest-link-email');
+    const passwordEl = document.getElementById('guest-link-password');
+    const errorEl    = document.getElementById('guest-link-error');
+    const submitBtn  = document.getElementById('guest-link-submit-btn');
+
+    const email    = emailEl?.value.trim() || '';
+    const password = passwordEl?.value || '';
+
+    errorEl.style.display = 'none';
+
+    if (!email || !password) {
+      errorEl.textContent = '이메일과 비밀번호를 입력해주세요.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    submitBtn.disabled    = true;
+    submitBtn.textContent = '[ 처리 중... ]';
+
+    const { error } = await supabaseClient.auth.updateUser({ email, password });
+
+    if (error) {
+      submitBtn.disabled    = false;
+      submitBtn.textContent = '[ 연동하기 ]';
+      errorEl.textContent   = error.message;
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    const box = document.getElementById('guest-link-modal-box');
+    box.innerHTML = `
+      <div class="amber" style="text-align:center; letter-spacing:2px; margin-bottom:16px;">[ 이메일 발송 완료 ]</div>
+      <div style="text-align:center; color:var(--text); margin-bottom:20px; line-height:1.8; font-size:0.9rem;">
+        확인 이메일을 발송했습니다.<br>이메일을 확인하고 링크를 클릭해주세요.
+      </div>
+      <div style="text-align:center;">
+        <button class="btn" onclick="Game.closeGuestLinkModal()">[ 확인 ]</button>
+      </div>
+    `;
+  }
+
+  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, claimQuestReward, openNpcDialogue, npcNext, closeNpcDialogue, openVillageModal, closeVillageModal, startBossChallenge, acceptQuest, declineQuest, openGuestLinkModal, closeGuestLinkModal, submitGuestLink };
 })();

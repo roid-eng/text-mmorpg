@@ -3,6 +3,7 @@
   <!-- 좌측: 스탯 패널 (PC만) -->
   <div id="stat-panel" class="panel side-panel">
     <div class="panel-title">HERO</div>
+    <div id="guest-badge" class="guest-badge" style="display:none;" onclick="Game.openGuestLinkModal()">[ GUEST MODE ]</div>
     <div id="stat-name" class="amber"></div>
     <div id="stat-class" class="muted"></div>
     <div id="stat-level"></div>
@@ -41,6 +42,7 @@
           <button class="btn" onclick="authLogout()" style="padding:4px 8px; font-size:0.75rem;">LOGOUT</button>
         </div>
       </div>
+      <div id="mobile-guest-badge" class="guest-badge" style="display:none; margin-bottom:6px;" onclick="Game.openGuestLinkModal()">[ GUEST MODE ]</div>
 
       <!-- HP 바 -->
       <div style="margin-bottom:4px;">
