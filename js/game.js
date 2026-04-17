@@ -391,12 +391,14 @@ const Game = (() => {
       const exploreToday = new Date(); exploreToday.setHours(0, 0, 0, 0);
       const { data: eQuestRows } = await supabaseClient
         .from('text_mmorpg_character_quests')
-        .select('id, quest:quest_id(title, type, target_name)')
+        .select('id, quest:quest_id(title, type, target_name, quest_category)')
         .eq('character_id', character.id)
         .eq('completed', false)
         .gte('assigned_at', exploreToday.toISOString());
       const exploreMatch = (eQuestRows || []).filter(r =>
-        r.quest?.type === 'explore' && r.quest?.target_name === zone.name
+        r.quest?.type === 'explore' &&
+        r.quest?.quest_category !== 'main' &&
+        r.quest?.target_name === zone.name
       );
       for (const cq of exploreMatch) {
         await supabaseClient
