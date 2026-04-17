@@ -386,3 +386,22 @@
   margin: 0 auto;
   border: 1px solid var(--border);
 }
+
+/* ------------------------------------------------------------
+   전투 모달 SVG 실루엣
+   ------------------------------------------------------------ */
+#combat-monster-ascii svg * {
+  fill: #2a2a2a !important;
+  stroke: #2a2a2a !important;
+}
+
+/* 보스 눈은 빨간색 유지 */
+#combat-monster-ascii svg circle[fill="#f44336"],
+#combat-monster-ascii svg circle[fill="#e8a020"] {
+  fill: inherit !important;
+}
+
+/* SVG 전체에 약한 그림자로 외곽선 효과 */
+#combat-monster-ascii svg {
+  filter: drop-shadow(0 0 4px rgba(255,255,255,0.08));
+}
