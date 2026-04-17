@@ -58,6 +58,8 @@ const Game = (() => {
   let _questOfferShown = false;
   let _questOfferActive = false;
   let _isGuest = false;
+  let _currentInventoryTab = 'all';
+  let _currentQuestTab = 'daily';
 
   function log(text, type = '') {
     if (!logEl) return;
@@ -122,6 +124,7 @@ const Game = (() => {
     log(`Mytharion에 오신 것을 환영합니다, ${character.name}.`, 'story');
     log(`직업: ${character.class}  |  레벨: ${character.level}`, 'system');
     renderStats();
+    renderQuestPanel();
   }
 
   async function restoreEquippedBonuses() {
@@ -774,17 +777,39 @@ const Game = (() => {
     }
 
     renderStats();
+    renderQuestPanel();
     await renderZone(parseInt(character.zone_id));
     setActionsDisabled(false);
   }
 
   async function showInventory() {
-    const panel = document.getElementById('inventory-panel');
-    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    _currentInventoryTab = 'all';
+    ['all', 'equipment', 'consumable'].forEach(t => {
+      const btn = document.getElementById(`inv-tab-${t}`);
+      if (btn) btn.classList.toggle('shop-tab-active', t === 'all');
+    });
+    document.getElementById('inventory-modal-overlay').style.display = 'flex';
+    await loadInventoryItems('all');
+  }
 
-    const list = document.getElementById('inventory-list');
-    list.innerHTML = '<span class="muted">불러오는 중...</span>';
-    panel.style.display = 'block';
+  function closeInventoryModal() {
+    document.getElementById('inventory-modal-overlay').style.display = 'none';
+  }
+
+  async function filterInventoryTab(tab) {
+    _currentInventoryTab = tab;
+    ['all', 'equipment', 'consumable'].forEach(t => {
+      const btn = document.getElementById(`inv-tab-${t}`);
+      if (btn) btn.classList.toggle('shop-tab-active', t === tab);
+    });
+    await loadInventoryItems(tab);
+  }
+
+  async function loadInventoryItems(tab) {
+    const grid = document.getElementById('inventory-grid');
+    const footer = document.getElementById('inventory-footer');
+    if (!grid) return;
+    grid.innerHTML = '<span class="muted" style="grid-column:1/-1; font-size:0.8rem;">불러오는 중...</span>';
 
     const { data: rows, error } = await supabaseClient
       .from('text_mmorpg_inventory')
@@ -792,38 +817,62 @@ const Game = (() => {
       .eq('character_id', character.id)
       .order('created_at', { ascending: false });
 
-    if (error) { list.innerHTML = '<span class="muted">불러오기 실패</span>'; return; }
-    if (!rows || rows.length === 0) { list.innerHTML = '<span class="muted">아이템이 없습니다.</span>'; return; }
+    if (error) { grid.innerHTML = '<span class="muted" style="grid-column:1/-1;">불러오기 실패</span>'; return; }
 
-    // 아이템 정의에서 bonus 조회
-    const itemIds = [...new Set(rows.map(r => r.item_id))];
-    const { data: itemDefs } = await supabaseClient
-      .from('text_mmorpg_items')
-      .select('id, atk_bonus, def_bonus')
-      .in('id', itemIds.map(Number));
+    const allItems = rows || [];
+    let filtered = allItems;
+    if (tab === 'equipment') filtered = allItems.filter(r => r.item_type !== 'consumable');
+    else if (tab === 'consumable') filtered = allItems.filter(r => r.item_type === 'consumable');
+
+    const itemIds = [...new Set(filtered.map(r => r.item_id))];
     const itemMap = {};
-    (itemDefs || []).forEach(i => { itemMap[String(i.id)] = i; });
+    if (itemIds.length > 0) {
+      const { data: itemDefs } = await supabaseClient
+        .from('text_mmorpg_items')
+        .select('id, atk_bonus, def_bonus')
+        .in('id', itemIds.map(Number));
+      (itemDefs || []).forEach(i => { itemMap[String(i.id)] = i; });
+    }
 
-    list.innerHTML = '';
-    rows.forEach(row => {
-      const def = itemMap[row.item_id] || {};
-      const bonusParts = [];
-      if (def.atk_bonus) bonusParts.push(`ATK+${def.atk_bonus}`);
-      if (def.def_bonus) bonusParts.push(`DEF+${def.def_bonus}`);
-      const bonusStr = bonusParts.join(' ');
+    grid.innerHTML = '';
 
-      const line = document.createElement('div');
-      line.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:3px 0;';
-      line.innerHTML = `
-        <span>- ${row.item_name} (${row.item_type})${bonusStr ? ` <span class="amber">${bonusStr}</span>` : ''}</span>
-        ${row.item_type === 'consumable'
-          ? `<button class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="Game.useItem('${row.id}', '${row.item_id}')">[ 사용 ]</button>`
-          : row.equipped
-            ? `<button class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="Game.unequipItem('${row.id}', '${row.item_id}')">[ 해제 ]</button>`
-            : `<button class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="Game.equipItem('${row.id}', '${row.item_id}')">[ 장착 ]</button>`}
-      `;
-      list.appendChild(line);
-    });
+    if (filtered.length === 0) {
+      grid.innerHTML = '<span class="muted" style="grid-column:1/-1; font-size:0.8rem;">아이템이 없습니다.</span>';
+    } else {
+      filtered.forEach(row => {
+        const def = itemMap[row.item_id] || {};
+        const bonusParts = [];
+        if (def.atk_bonus) bonusParts.push(`ATK+${def.atk_bonus}`);
+        if (def.def_bonus) bonusParts.push(`DEF+${def.def_bonus}`);
+        const bonusStr = bonusParts.join(' ');
+        const equipped = row.equipped;
+
+        const slot = document.createElement('div');
+        slot.style.cssText = `border:1px solid ${equipped ? 'var(--amber)' : 'var(--amber-dim)'}; padding:6px 4px; text-align:center; font-size:0.7rem; min-height:72px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; gap:2px;`;
+
+        let actionFn, actionLabel;
+        if (row.item_type === 'consumable') {
+          actionFn = `Game.useItem('${row.id}', '${row.item_id}')`;
+          actionLabel = '사용';
+        } else if (equipped) {
+          actionFn = `Game.unequipItem('${row.id}', '${row.item_id}')`;
+          actionLabel = '해제';
+        } else {
+          actionFn = `Game.equipItem('${row.id}', '${row.item_id}')`;
+          actionLabel = '장착';
+        }
+
+        slot.innerHTML = `
+          <div style="color:${equipped ? 'var(--amber)' : 'var(--text)'}; word-break:break-all; line-height:1.3;">${row.item_name}</div>
+          ${bonusStr ? `<div style="color:var(--amber); font-size:0.6rem;">${bonusStr}</div>` : '<div></div>'}
+          ${equipped ? '<div style="font-size:0.6rem; color:var(--amber);">[장착중]</div>' : '<div></div>'}
+          <button class="btn" style="padding:1px 4px; font-size:0.65rem; width:100%;" onclick="${actionFn}">${actionLabel}</button>
+        `;
+        grid.appendChild(slot);
+      });
+    }
+
+    if (footer) footer.textContent = `슬롯: ${allItems.length} / 20 사용`;
   }
 
   async function equipItem(inventoryId, itemId) {
@@ -871,8 +920,7 @@ const Game = (() => {
     log(`${item.name} 을 장착했습니다.`, 'system');
 
     renderStats();
-    document.getElementById('inventory-panel').style.display = 'none';
-    await showInventory();
+    await loadInventoryItems(_currentInventoryTab);
   }
 
   async function unequipItem(inventoryId, itemId) {
@@ -894,8 +942,7 @@ const Game = (() => {
     }
 
     renderStats();
-    document.getElementById('inventory-panel').style.display = 'none';
-    await showInventory();
+    await loadInventoryItems(_currentInventoryTab);
   }
 
   async function useItem(inventoryId, itemId) {
@@ -924,7 +971,7 @@ const Game = (() => {
       await Character.save(character);
       renderStats();
       log(logMsg, 'item');
-      document.getElementById('inventory-panel').style.display = 'none';
+      closeInventoryModal();
       await moveToZone(1);
       return;
     } else {
@@ -936,8 +983,7 @@ const Game = (() => {
     await Character.save(character);
     renderStats();
     log(logMsg, 'item');
-    document.getElementById('inventory-panel').style.display = 'none';
-    await showInventory();
+    await loadInventoryItems(_currentInventoryTab);
   }
 
   // --- REST ---
@@ -1272,11 +1318,22 @@ const Game = (() => {
   function openQuestModal() {
     const overlay = document.getElementById('quest-modal-overlay');
     overlay.style.display = 'flex';
+    _currentQuestTab = 'daily';
+    document.getElementById('quest-tab-daily')?.classList.add('shop-tab-active');
+    document.getElementById('quest-tab-story')?.classList.remove('shop-tab-active');
     loadDailyQuests();
   }
 
   function closeQuestModal() {
     document.getElementById('quest-modal-overlay').style.display = 'none';
+  }
+
+  function switchQuestTab(tab) {
+    _currentQuestTab = tab;
+    document.getElementById('quest-tab-daily')?.classList.toggle('shop-tab-active', tab === 'daily');
+    document.getElementById('quest-tab-story')?.classList.toggle('shop-tab-active', tab === 'story');
+    if (tab === 'daily') loadDailyQuests();
+    else loadStoryQuests();
   }
 
   async function loadDailyQuests() {
@@ -1289,7 +1346,7 @@ const Game = (() => {
 
     const { data: charQuests } = await supabaseClient
       .from('text_mmorpg_character_quests')
-      .select('id, progress, completed, quest:quest_id(title, description, type, target_count, reward_exp, reward_gold, difficulty)')
+      .select('id, progress, completed, quest:quest_id(title, description, type, target_count, reward_exp, reward_gold, difficulty, target_name)')
       .eq('character_id', character.id)
       .gte('assigned_at', todayISO);
 
@@ -1330,6 +1387,12 @@ const Game = (() => {
       if (!q) return;
       const color = diffColor[q.difficulty] || 'var(--amber)';
       const claimDisabled = cq.completed ? '' : 'disabled style="opacity:0.4;"';
+      const pct = Math.min(100, Math.round(cq.progress / Math.max(1, q.target_count) * 100));
+      const targetLine = q.target_name
+        ? (q.type === 'explore'
+            ? `대상: ${q.target_name} 탐험`
+            : `대상: ${q.target_name}`)
+        : '';
       const card = document.createElement('div');
       card.id = `quest-card-${cq.id}`;
       card.style.cssText = 'border:1px solid var(--amber-dim); padding:12px; margin-bottom:10px;';
@@ -1338,8 +1401,12 @@ const Game = (() => {
           <span style="color:${color}; font-size:0.75rem;">[${diffLabel[q.difficulty] || q.difficulty}]</span>
           <span style="margin-left:6px;">${q.title}</span>
         </div>
-        <div class="muted" style="font-size:0.8rem; margin-bottom:6px;">${q.description || ''}</div>
-        <div style="font-size:0.85rem; margin-bottom:4px;">진행: ${cq.progress} / ${q.target_count}</div>
+        <div class="muted" style="font-size:0.8rem; margin-bottom:4px;">${q.description || ''}</div>
+        ${targetLine ? `<div class="muted" style="font-size:0.75rem; margin-bottom:6px;">${targetLine}</div>` : ''}
+        <div style="font-size:0.8rem; margin-bottom:4px;">진행: ${cq.progress} / ${q.target_count}</div>
+        <div class="stat-bar" style="height:6px; margin-bottom:8px;">
+          <div class="stat-bar-fill" style="background:var(--amber); width:${pct}%;"></div>
+        </div>
         <div class="muted" style="font-size:0.8rem; margin-bottom:8px;">보상: EXP ${q.reward_exp} / Gold ${q.reward_gold}</div>
         <button class="btn" ${claimDisabled}
           onclick="Game.claimQuestReward(${cq.id}, ${q.reward_exp}, ${q.reward_gold})">[ 완료 수령 ]</button>
@@ -1387,9 +1454,93 @@ const Game = (() => {
     }
     await Character.save(character);
     renderStats();
+    renderQuestPanel();
 
     // 5. 로그
     log(`퀘스트 완료! EXP +${rewardExp}, Gold +${rewardGold} 획득.`, 'item');
+  }
+
+  async function loadStoryQuests() {
+    const listEl = document.getElementById('quest-list');
+    listEl.innerHTML = '<span class="muted">불러오는 중...</span>';
+
+    const { data: charQuests } = await supabaseClient
+      .from('text_mmorpg_character_quests')
+      .select('id, progress, completed, quest:quest_id(title, description, type, target_count, reward_exp, reward_gold, target_name, quest_category)')
+      .eq('character_id', character.id)
+      .eq('completed', false);
+
+    const storyQuests = (charQuests || []).filter(cq => cq.quest?.quest_category === 'main');
+
+    if (storyQuests.length === 0) {
+      listEl.innerHTML = '<span class="muted">진행 중인 스토리 퀘스트가 없습니다.</span>';
+      return;
+    }
+
+    listEl.innerHTML = '';
+    storyQuests.forEach(cq => {
+      const q = cq.quest;
+      if (!q) return;
+      const pct = Math.min(100, Math.round(cq.progress / Math.max(1, q.target_count) * 100));
+      const targetLine = q.target_name
+        ? (q.type === 'explore' ? `대상: ${q.target_name} 탐험` : `대상: ${q.target_name}`)
+        : '';
+      const claimDisabled = cq.completed ? '' : 'disabled style="opacity:0.4;"';
+      const card = document.createElement('div');
+      card.id = `quest-card-${cq.id}`;
+      card.style.cssText = 'border:1px solid var(--amber); padding:12px; margin-bottom:10px;';
+      card.innerHTML = `
+        <div style="margin-bottom:4px;">
+          <span style="color:var(--amber); font-size:0.75rem;">[STORY]</span>
+          <span style="margin-left:6px;">${q.title}</span>
+        </div>
+        <div class="muted" style="font-size:0.8rem; margin-bottom:4px;">${q.description || ''}</div>
+        ${targetLine ? `<div class="muted" style="font-size:0.75rem; margin-bottom:6px;">${targetLine}</div>` : ''}
+        <div style="font-size:0.8rem; margin-bottom:4px;">진행: ${cq.progress} / ${q.target_count}</div>
+        <div class="stat-bar" style="height:6px; margin-bottom:8px;">
+          <div class="stat-bar-fill" style="background:var(--amber); width:${pct}%;"></div>
+        </div>
+        <div class="muted" style="font-size:0.8rem; margin-bottom:8px;">보상: EXP ${q.reward_exp} / Gold ${q.reward_gold}</div>
+        <button class="btn" ${claimDisabled}
+          onclick="Game.claimQuestReward(${cq.id}, ${q.reward_exp}, ${q.reward_gold})">[ 완료 수령 ]</button>
+      `;
+      listEl.appendChild(card);
+    });
+  }
+
+  async function renderQuestPanel() {
+    const panelEl = document.getElementById('quest-panel');
+    const listEl = document.getElementById('quest-panel-list');
+    if (!panelEl || !listEl) return;
+
+    const { data: charQuests } = await supabaseClient
+      .from('text_mmorpg_character_quests')
+      .select('id, progress, completed, quest:quest_id(title, type, target_count, quest_category)')
+      .eq('character_id', character.id)
+      .eq('completed', false);
+
+    if (!charQuests || charQuests.length === 0) {
+      listEl.innerHTML = '<span class="muted" style="font-size:0.7rem;">진행중 퀘스트 없음</span>';
+      return;
+    }
+
+    listEl.innerHTML = '';
+    charQuests.forEach(cq => {
+      const q = cq.quest;
+      if (!q) return;
+      const pct = Math.min(100, Math.round(cq.progress / Math.max(1, q.target_count) * 100));
+      const isMain = q.quest_category === 'main';
+      const item = document.createElement('div');
+      item.style.cssText = 'margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid var(--border);';
+      item.innerHTML = `
+        <div style="color:${isMain ? 'var(--amber)' : 'var(--text)'}; margin-bottom:2px; word-break:break-all; line-height:1.3;">${isMain ? '★ ' : ''}${q.title}</div>
+        <div class="muted" style="font-size:0.68rem; margin-bottom:3px;">${cq.progress} / ${q.target_count}</div>
+        <div class="stat-bar" style="height:4px;">
+          <div class="stat-bar-fill" style="background:var(--amber); width:${pct}%;"></div>
+        </div>
+      `;
+      listEl.appendChild(item);
+    });
   }
 
   // ── NPC 대화 ──────────────────────────────────────────────
@@ -1650,5 +1801,5 @@ const Game = (() => {
     `;
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, claimQuestReward, openNpcDialogue, npcNext, closeNpcDialogue, openVillageModal, closeVillageModal, startBossChallenge, acceptQuest, declineQuest, openGuestLinkModal, closeGuestLinkModal, submitGuestLink };
+  return { start, log, showZone, explore, onCombatEnd, showInventory, closeInventoryModal, filterInventoryTab, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, switchQuestTab, claimQuestReward, openNpcDialogue, npcNext, closeNpcDialogue, openVillageModal, closeVillageModal, startBossChallenge, acceptQuest, declineQuest, openGuestLinkModal, closeGuestLinkModal, submitGuestLink };
 })();

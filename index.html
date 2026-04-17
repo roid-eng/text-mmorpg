@@ -66,11 +66,36 @@
     <div style="width:90%; max-width:480px; background:var(--bg-panel);
       border:1px solid var(--amber-dim); padding:20px;
       max-height:85vh; overflow-y:auto; display:flex; flex-direction:column;">
-      <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-        <span class="amber">[ 퀘스트 게시판 ]</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span class="amber">[ 퀘스트 ]</span>
         <button class="btn" onclick="Game.closeQuestModal()" style="padding:2px 8px;">[ X ]</button>
       </div>
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button id="quest-tab-daily" class="btn shop-tab-active" onclick="Game.switchQuestTab('daily')">[ 일일 퀘스트 ]</button>
+        <button id="quest-tab-story" class="btn" onclick="Game.switchQuestTab('story')">[ 스토리 퀘스트 ]</button>
+      </div>
       <div id="quest-list" style="overflow-y:auto; flex:1;"></div>
+    </div>
+  </div>
+
+  <!-- Inventory modal -->
+  <div id="inventory-modal-overlay" style="display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.85); z-index:100;
+    justify-content:center; align-items:flex-start; padding-top:5vh;">
+    <div style="width:90%; max-width:520px; background:var(--bg-panel);
+      border:1px solid var(--amber-dim); padding:20px;
+      max-height:85vh; overflow-y:auto; display:flex; flex-direction:column;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span class="amber">[ 인벤토리 ]</span>
+        <button class="btn" onclick="Game.closeInventoryModal()" style="padding:2px 8px;">[ X ]</button>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button id="inv-tab-all" class="btn shop-tab-active" onclick="Game.filterInventoryTab('all')">[ 전체 ]</button>
+        <button id="inv-tab-equipment" class="btn" onclick="Game.filterInventoryTab('equipment')">[ 장비 ]</button>
+        <button id="inv-tab-consumable" class="btn" onclick="Game.filterInventoryTab('consumable')">[ 소비 ]</button>
+      </div>
+      <div id="inventory-grid" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-bottom:12px; min-height:60px;"></div>
+      <div id="inventory-footer" class="muted" style="font-size:0.8rem; text-align:right; border-top:1px solid var(--border); padding-top:8px;"></div>
     </div>
   </div>
 
