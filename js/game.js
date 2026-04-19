@@ -581,7 +581,7 @@ const Game = (() => {
       .eq('is_boss', false);
     if (error || !monsters || monsters.length === 0) return;
 
-    // 선공 몬스터 — 30% 확률 조우
+    // 선공 몬스터 — 30% 확률 자동 조우
     const aggressive = monsters.filter(m => m.is_aggressive);
     if (aggressive.length > 0) {
       if (Math.random() < 0.3) {
@@ -594,20 +594,22 @@ const Game = (() => {
       }
     }
 
-    // 비선공 몬스터 — 모달로 표시
-    const passive = monsters.filter(m => !m.is_aggressive);
-    if (passive.length === 0) return;
+    // 전체 몬스터 — 모달로 표시 (선공몹 포함)
+    if (monsters.length === 0) return;
 
     const list = document.getElementById('monster-modal-list');
     list.innerHTML = '';
 
-    passive.forEach(m => {
+    monsters.forEach(m => {
+      const aggroTag = m.is_aggressive
+        ? `<span style="color:#e05050; font-size:0.75rem; margin-left:6px;">[선공]</span>`
+        : '';
       const card = document.createElement('div');
       card.className = 'monster-card';
       card.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
           <div>
-            <div class="amber" style="margin-bottom:4px;">${m.name}</div>
+            <div class="amber" style="margin-bottom:4px;">${m.name}${aggroTag}</div>
             <div class="muted" style="font-size:0.8rem;">${m.description || ''}</div>
           </div>
           <button class="btn" style="white-space:nowrap; flex-shrink:0;">[ 싸우기 ]</button>
