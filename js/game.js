@@ -179,6 +179,7 @@ const Game = (() => {
   function getReportNpc(progress) {
     if (progress >= 1 && progress <= 3) return '장로 에르난';
     if (progress >= 5 && progress <= 7) return '숲의 현자 실바';
+    if (progress >= 9 && progress <= 11) return '균열의 탐험가 카이로스';
     return null;
   }
 
@@ -204,8 +205,16 @@ const Game = (() => {
     } else if (next === 7) {
       await assignMainQuest('숲의 수호자');
       storyLog('새 퀘스트: 숲의 수호자');
-    } else if (next >= 8) {
+    } else if (next === 8) {
       storyLog('2막 완료! 이그나르를 향한 길이 열렸다.');
+    } else if (next === 9) {
+      await assignMainQuest('봉인의 핵심');
+      storyLog('새 퀘스트: 봉인의 핵심');
+    } else if (next === 10) {
+      await assignMainQuest('균열의 지배자');
+      storyLog('새 퀘스트: 균열의 지배자');
+    } else if (next >= 11) {
+      storyLog('3막 완료! 균열이 안정되었다.');
     }
   }
 
@@ -226,6 +235,14 @@ const Game = (() => {
       character.story_progress = 5;
       await assignMainQuest('숲의 이상');
       storyLog('퀘스트 수락: 숲의 이상');
+    } else if (npcName === '균열의 탐험가 카이로스' && (character.story_progress || 0) === 8) {
+      await supabaseClient
+        .from('text_mmorpg_characters')
+        .update({ story_progress: 9 })
+        .eq('id', character.id);
+      character.story_progress = 9;
+      await assignMainQuest('균열의 탐사');
+      storyLog('퀘스트 수락: 균열의 탐사');
     }
   }
 
@@ -532,6 +549,17 @@ const Game = (() => {
         npcSection.innerHTML = `
           <div class="muted" style="font-size:0.75rem; margin-bottom:6px;">[ NPC ]</div>
           <button class="btn" style="width:100%;" onclick="Game.openNpcDialogue('숲의 현자 실바')">[ 숲의 현자 실바에게 말 걸기 ]</button>
+        `;
+        btnWrap.appendChild(npcSection);
+      }
+
+      // 이그나르의 균열(zone_id=3) NPC 버튼 (story_progress >= 8)
+      if (zoneId === 3 && (character.story_progress || 0) >= 8) {
+        const npcSection = document.createElement('div');
+        npcSection.style.cssText = 'margin-top:8px; border-top:1px solid var(--border); padding-top:8px;';
+        npcSection.innerHTML = `
+          <div class="muted" style="font-size:0.75rem; margin-bottom:6px;">[ NPC ]</div>
+          <button class="btn" style="width:100%;" onclick="Game.openNpcDialogue('균열의 탐험가 카이로스')">[ 균열의 탐험가 카이로스에게 말 걸기 ]</button>
         `;
         btnWrap.appendChild(npcSection);
       }
@@ -1640,6 +1668,19 @@ const Game = (() => {
       } else {
         dialogueType = 'completed';
       }
+    } else if (npcName === '균열의 탐험가 카이로스') {
+      const progress = character.story_progress || 0;
+      if (progress === 8) {
+        dialogueType = _questOfferShown ? 'quest_offer' : 'default';
+      } else if (progress === 9) {
+        dialogueType = 'in_progress_1';
+      } else if (progress === 10) {
+        dialogueType = 'in_progress_2';
+      } else if (progress === 11) {
+        dialogueType = 'in_progress_3';
+      } else {
+        dialogueType = 'completed';
+      }
     }
 
     const { data: dialogues } = await supabaseClient
@@ -1708,7 +1749,8 @@ const Game = (() => {
       const progress = character.story_progress || 0;
       const needsOffer =
         (_currentNpcName === '장로 에르난' && progress === 0) ||
-        (_currentNpcName === '숲의 현자 실바' && progress === 4 && !_questOfferShown);
+        (_currentNpcName === '숲의 현자 실바' && progress === 4 && !_questOfferShown) ||
+        (_currentNpcName === '균열의 탐험가 카이로스' && progress === 8 && !_questOfferShown);
       if (needsOffer) {
         await showQuestOffer();
       } else {
@@ -1719,7 +1761,11 @@ const Game = (() => {
   }
 
   async function showQuestOffer() {
-    const questTitle = _currentNpcName === '숲의 현자 실바' ? '숲의 이상' : '평야의 이상 징후';
+    const questTitle = _currentNpcName === '숲의 현자 실바'
+      ? '숲의 이상'
+      : _currentNpcName === '균열의 탐험가 카이로스'
+        ? '균열의 탐사'
+        : '평야의 이상 징후';
     const { data: quest } = await supabaseClient
       .from('text_mmorpg_quests')
       .select('title, reward_exp, reward_gold')
