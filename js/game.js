@@ -404,7 +404,7 @@ const Game = (() => {
       const exploreMatch = (eQuestRows || []).filter(r =>
         r.quest?.type === 'explore' &&
         r.quest?.quest_category !== 'main' &&
-        r.quest?.target_name === zone.name
+        zone.name.includes(r.quest?.target_name)
       );
       for (const cq of exploreMatch) {
         await supabaseClient
@@ -423,7 +423,7 @@ const Game = (() => {
       const mainExploreMatch = (mainExploreRows || []).filter(r =>
         r.quest?.quest_category === 'main' &&
         r.quest?.type === 'explore' &&
-        r.quest?.target_name === zone.name
+        zone.name.includes(r.quest?.target_name)
       );
       for (const cq of mainExploreMatch) {
         await supabaseClient
