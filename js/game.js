@@ -176,6 +176,12 @@ const Game = (() => {
       .insert({ character_id: character.id, quest_id: quest.id, progress: 0, completed: false });
   }
 
+  function getReportNpc(progress) {
+    if (progress >= 1 && progress <= 3) return '장로 에르난';
+    if (progress >= 5 && progress <= 7) return '숲의 현자 실바';
+    return null;
+  }
+
   async function advanceStoryProgress() {
     const next = (character.story_progress || 0) + 1;
     await supabaseClient
@@ -425,7 +431,8 @@ const Game = (() => {
           .update({ progress: 1, completed: true, completed_at: new Date().toISOString() })
           .eq('id', cq.id);
         storyLog(`퀘스트 완료: ${cq.quest.title}`);
-        await advanceStoryProgress();
+        const reportNpc = getReportNpc(character.story_progress || 0);
+        if (reportNpc) log(`${reportNpc}에게 보고하세요.`, 'amber');
       }
     }
 
@@ -748,7 +755,8 @@ const Game = (() => {
           .eq('id', cq.id);
         if (isDone) {
           storyLog(`퀘스트 완료: ${cq.quest.title}`);
-          await advanceStoryProgress();
+          const reportNpc = getReportNpc(character.story_progress || 0);
+          if (reportNpc) log(`${reportNpc}에게 보고하세요.`, 'amber');
         } else {
           log(`[ 스토리 ] ${cq.quest.title} (${newProgress}/${cq.quest.target_count})`, 'amber');
         }
@@ -766,7 +774,9 @@ const Game = (() => {
             .from('text_mmorpg_character_quests')
             .update({ progress: 1, completed: true, completed_at: new Date().toISOString() })
             .eq('id', cq.id);
-          await advanceStoryProgress();
+          storyLog(`퀘스트 완료: ${cq.quest?.title || '보스 처치'}`);
+          const reportNpc = getReportNpc(character.story_progress || 0);
+          if (reportNpc) log(`${reportNpc}에게 보고하세요.`, 'amber');
         }
       }
 
@@ -1586,6 +1596,21 @@ const Game = (() => {
 
     if (!npc) { log(`${npcName}: 대화를 나눌 수 없습니다.`, 'system'); return; }
 
+    // 완료된 메인 퀘스트 보고 처리
+    const reportNpc = getReportNpc(character.story_progress || 0);
+    if (npcName === reportNpc) {
+      const { data: cqRows } = await supabaseClient
+        .from('text_mmorpg_character_quests')
+        .select('id, quest:quest_id(title, reward_exp, reward_gold, quest_category)')
+        .eq('character_id', character.id)
+        .eq('completed', true);
+      const completedMain = (cqRows || []).find(r => r.quest?.quest_category === 'main');
+      if (completedMain) {
+        await showMainQuestReport(npcName, completedMain);
+        return;
+      }
+    }
+
     // story_progress 기준으로 dialogue_type 결정
     let dialogueType = 'default';
     if (npcName === '장로 에르난') {
@@ -1731,6 +1756,60 @@ const Game = (() => {
     _questOfferActive = true;
   }
 
+  async function showMainQuestReport(npcName, charQuest) {
+    _currentNpcName = npcName;
+    const q = charQuest.quest;
+    const rewardExp  = q?.reward_exp  || 0;
+    const rewardGold = q?.reward_gold || 0;
+
+    const overlay = document.getElementById('npc-modal-overlay');
+    overlay.style.display = 'flex';
+    overlay.onclick = null;
+
+    document.getElementById('npc-name').textContent = `[ ${npcName} ]`;
+    document.getElementById('npc-dialogue').innerHTML = `
+      <div style="margin-bottom:8px; color:var(--amber);">[ 퀘스트 완료 보고 ]</div>
+      <div style="margin-bottom:4px;">${q?.title || '퀘스트'}</div>
+      <div class="muted" style="font-size:0.8rem;">보상: EXP ${rewardExp} / Gold ${rewardGold}</div>
+    `;
+
+    const nextBtn = document.getElementById('npc-next-btn');
+    if (nextBtn) nextBtn.style.display = 'none';
+
+    const btnArea = document.querySelector('#npc-modal .btn-area');
+    if (btnArea) {
+      btnArea.innerHTML = `
+        <span></span>
+        <button class="btn" onclick="Game.claimMainQuestReward(${charQuest.id}, ${rewardExp}, ${rewardGold})">[ 보상 수령 ]</button>
+      `;
+    }
+  }
+
+  async function claimMainQuestReward(charQuestId, rewardExp, rewardGold) {
+    const { error } = await supabaseClient
+      .from('text_mmorpg_character_quests')
+      .delete()
+      .eq('id', charQuestId);
+    if (error) { log('보상 수령에 실패했습니다.', 'system'); return; }
+
+    character.exp  = (character.exp  || 0) + rewardExp;
+    character.gold = (character.gold || 0) + rewardGold;
+
+    const expNeeded = character.level * 100;
+    if (character.exp >= expNeeded) {
+      character = Character.levelUpStats(character);
+      log(`레벨 업! → Lv.${character.level}`, 'levelup');
+      if (_isGuest && character.level === 5) _checkGuestLevelPopup();
+    }
+    await Character.save(character);
+    renderStats();
+    renderQuestPanel();
+
+    log(`퀘스트 보상 수령! EXP +${rewardExp}, Gold +${rewardGold} 획득.`, 'item');
+    closeNpcDialogue();
+    await advanceStoryProgress();
+  }
+
   async function acceptQuest() {
     await onNpcDialogueComplete(_currentNpcName);
     log('퀘스트를 수락했습니다.', 'amber');
@@ -1847,5 +1926,5 @@ const Game = (() => {
     `;
   }
 
-  return { start, log, showZone, explore, onCombatEnd, showInventory, closeInventoryModal, filterInventoryTab, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, switchQuestTab, claimQuestReward, openNpcDialogue, npcNext, closeNpcDialogue, openVillageModal, closeVillageModal, startBossChallenge, acceptQuest, declineQuest, openGuestLinkModal, closeGuestLinkModal, submitGuestLink };
+  return { start, log, showZone, explore, onCombatEnd, showInventory, closeInventoryModal, filterInventoryTab, equipItem, unequipItem, useItem, showRanking, rest, closeMonsterModal, openShopModal, closeShopModal, shopTab, openQuestModal, closeQuestModal, switchQuestTab, claimQuestReward, openNpcDialogue, npcNext, closeNpcDialogue, openVillageModal, closeVillageModal, startBossChallenge, acceptQuest, declineQuest, openGuestLinkModal, closeGuestLinkModal, submitGuestLink, claimMainQuestReward };
 })();
