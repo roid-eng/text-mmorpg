@@ -1421,6 +1421,41 @@ const Game = (() => {
 
     let quests = charQuests || [];
 
+    // 완료된 퀘스트는 보상 수령 UI 없이 즉시 자동 처리
+    const completedQuests = quests.filter(cq => cq.completed);
+    for (const cq of completedQuests) {
+      const q = cq.quest;
+      if (!q) continue;
+      const { error } = await supabaseClient
+        .from('text_mmorpg_character_quests')
+        .delete()
+        .eq('id', cq.id);
+      if (!error) {
+        character.exp = (character.exp || 0) + (q.reward_exp || 0);
+        character.gold = (character.gold || 0) + (q.reward_gold || 0);
+        const expNeeded = character.level * 100;
+        if (character.exp >= expNeeded) {
+          character = Character.levelUpStats(character);
+          log(`레벨 업! → Lv.${character.level}`, 'levelup');
+          if (_isGuest && character.level === 5) _checkGuestLevelPopup();
+        }
+        log(`퀘스트 완료! EXP +${q.reward_exp}, Gold +${q.reward_gold} 획득.`, 'item');
+      }
+    }
+    if (completedQuests.length > 0) {
+      await Character.save(character);
+      renderStats();
+      renderQuestPanel();
+    }
+
+    // 진행 중인 퀘스트만 렌더링
+    quests = quests.filter(cq => !cq.completed);
+
+    if (quests.length === 0 && completedQuests.length > 0) {
+      listEl.innerHTML = '<span class="muted">오늘 퀘스트를 모두 완료했습니다.</span>';
+      return;
+    }
+
     if (quests.length === 0) {
       const { data: pool } = await supabaseClient
         .from('text_mmorpg_quests')
@@ -1455,7 +1490,6 @@ const Game = (() => {
       const q = cq.quest;
       if (!q) return;
       const color = diffColor[q.difficulty] || 'var(--amber)';
-      const claimDisabled = cq.completed ? '' : 'disabled style="opacity:0.4;"';
       const pct = Math.min(100, Math.round(cq.progress / Math.max(1, q.target_count) * 100));
       const targetLine = q.target_name
         ? (q.type === 'explore'
@@ -1476,21 +1510,22 @@ const Game = (() => {
         <div class="stat-bar" style="height:6px; margin-bottom:8px;">
           <div class="stat-bar-fill" style="background:var(--amber); width:${pct}%;"></div>
         </div>
-        <div class="muted" style="font-size:0.8rem; margin-bottom:8px;">보상: EXP ${q.reward_exp} / Gold ${q.reward_gold}</div>
-        <button class="btn" ${claimDisabled}
-          onclick="Game.claimQuestReward(${cq.id}, ${q.reward_exp}, ${q.reward_gold})">[ 완료 수령 ]</button>
+        <div class="muted" style="font-size:0.8rem;">보상: EXP ${q.reward_exp} / Gold ${q.reward_gold}</div>
       `;
       listEl.appendChild(card);
     });
   }
 
   async function claimQuestReward(characterQuestId, rewardExp, rewardGold) {
-    // 1. 버튼 즉시 비활성화 (중복 클릭 방지)
+    // 1. 카드 즉시 제거 (낙관적 업데이트)
     const card = document.getElementById(`quest-card-${characterQuestId}`);
-    const btn = card?.querySelector('button');
-    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
+    card?.remove();
+    const listEl = document.getElementById('quest-list');
+    if (listEl && listEl.children.length === 0) {
+      listEl.innerHTML = '<span class="muted">오늘 퀘스트를 모두 완료했습니다.</span>';
+    }
 
-    // 2. DB DELETE (await)
+    // 2. DB DELETE
     const { error } = await supabaseClient
       .from('text_mmorpg_character_quests')
       .delete()
@@ -1498,20 +1533,12 @@ const Game = (() => {
 
     if (error) {
       log('보상 수령에 실패했습니다. 다시 시도하십시오.', 'system');
-      if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+      if (_currentQuestTab === 'daily') loadDailyQuests();
+      else loadStoryQuests();
       return;
     }
 
-    // 3. 카드 제거
-    card?.remove();
-
-    // 남은 카드 없으면 완료 문구 표시
-    const listEl = document.getElementById('quest-list');
-    if (listEl && listEl.children.length === 0) {
-      listEl.innerHTML = '<span class="muted">오늘 퀘스트를 모두 완료했습니다.</span>';
-    }
-
-    // 4. 보상 지급
+    // 3. 보상 지급
     character.exp = (character.exp || 0) + rewardExp;
     character.gold = (character.gold || 0) + rewardGold;
 
@@ -1525,7 +1552,6 @@ const Game = (() => {
     renderStats();
     renderQuestPanel();
 
-    // 5. 로그
     log(`퀘스트 완료! EXP +${rewardExp}, Gold +${rewardGold} 획득.`, 'item');
   }
 
@@ -1554,7 +1580,6 @@ const Game = (() => {
       const targetLine = q.target_name
         ? (q.type === 'explore' ? `대상: ${q.target_name} 탐험` : `대상: ${q.target_name}`)
         : '';
-      const claimDisabled = cq.completed ? '' : 'disabled style="opacity:0.4;"';
       const card = document.createElement('div');
       card.id = `quest-card-${cq.id}`;
       card.style.cssText = 'border:1px solid var(--amber); padding:12px; margin-bottom:10px;';
@@ -1569,9 +1594,7 @@ const Game = (() => {
         <div class="stat-bar" style="height:6px; margin-bottom:8px;">
           <div class="stat-bar-fill" style="background:var(--amber); width:${pct}%;"></div>
         </div>
-        <div class="muted" style="font-size:0.8rem; margin-bottom:8px;">보상: EXP ${q.reward_exp} / Gold ${q.reward_gold}</div>
-        <button class="btn" ${claimDisabled}
-          onclick="Game.claimQuestReward(${cq.id}, ${q.reward_exp}, ${q.reward_gold})">[ 완료 수령 ]</button>
+        <div class="muted" style="font-size:0.8rem;">보상: EXP ${q.reward_exp} / Gold ${q.reward_gold}</div>
       `;
       listEl.appendChild(card);
     });
